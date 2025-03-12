@@ -45,23 +45,23 @@ const Index = () => {
   };
   
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white p-4 md:p-8">
+    <div className="min-h-screen bg-[#312e2b] text-white p-4">
       <div className="max-w-5xl mx-auto">
         <motion.header 
-          className="text-center mb-8"
+          className="text-center mb-4"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-3xl md:text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
-            6×6 Chess Variant
+          <h1 className="text-2xl md:text-3xl font-bold text-white">
+            Chessmihouse 6×6
           </h1>
-          <p className="text-gray-400 mt-2">
-            A minimalist chess experience on a compact board
+          <p className="text-gray-400 text-sm">
+            A chess.com inspired variant with Crazyhouse rules
           </p>
         </motion.header>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <motion.div 
             className="lg:col-span-2"
             initial={{ opacity: 0, scale: 0.95 }}
@@ -76,7 +76,7 @@ const Index = () => {
           </motion.div>
           
           <motion.div 
-            className="space-y-6"
+            className="space-y-4"
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: 0.2 }}
@@ -91,15 +91,6 @@ const Index = () => {
             <GameInfo gameState={gameState} />
             
             <MoveHistory gameState={gameState} />
-            
-            <div className="glass-panel p-4 text-sm space-y-3">
-              <h3 className="font-semibold">About This Variant</h3>
-              <p className="opacity-80 text-xs leading-relaxed">
-                This 6×6 chess variant features a compact board with simplified pieces. 
-                Each player has 1 king, 1 queen, 2 rooks, 2 knights, and 6 pawns. 
-                Traditional chess rules apply, with pawns promoting upon reaching the opposite end.
-              </p>
-            </div>
           </motion.div>
         </div>
       </div>

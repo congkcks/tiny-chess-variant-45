@@ -68,11 +68,17 @@ export default {
 					ring: 'hsl(var(--sidebar-ring))'
 				},
 				board: {
-					light: '#f0e9db',
-					dark: '#b58863',
+					light: '#eee',
+					dark: '#769656',
 					highlight: 'rgba(255, 255, 0, 0.4)',
 					check: 'rgba(255, 0, 0, 0.4)',
-					lastMove: 'rgba(0, 128, 128, 0.4)',
+					lastMove: 'rgba(255, 255, 0, 0.2)',
+				},
+				chess: {
+					background: '#312e2b',
+					panel: '#272421',
+					border: '#3d3934',
+					text: '#b8b0a2',
 				}
 			},
 			borderRadius: {

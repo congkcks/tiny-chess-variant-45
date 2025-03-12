@@ -31,7 +31,7 @@ const PieceBank: FC<PieceBankProps> = ({
   return (
     <motion.div 
       className={cn(
-        "p-4 rounded-lg bg-gradient-to-br from-gray-800 to-gray-900",
+        "p-3 rounded-md bg-[#272421] border border-[#3d3934]",
         !isActive && "opacity-50",
         className
       )}
@@ -39,10 +39,10 @@ const PieceBank: FC<PieceBankProps> = ({
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3 }}
     >
-      <h3 className="text-sm font-semibold mb-2 text-white/80">
+      <h3 className="text-xs font-semibold mb-2 text-[#b8b0a2]">
         {color === PieceColor.WHITE ? "White's" : "Black's"} Captured Pieces
       </h3>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-1">
         {Object.entries(groupedPieces).map(([type, pieces]) => (
           <div 
             key={type}
@@ -58,7 +58,7 @@ const PieceBank: FC<PieceBankProps> = ({
             >
               <ChessPiece piece={pieces[0]} />
               {pieces.length > 1 && (
-                <span className="absolute -top-1 -right-1 bg-primary text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-[#769656] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
                   {pieces.length}
                 </span>
               )}

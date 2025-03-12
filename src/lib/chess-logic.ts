@@ -1,351 +1,323 @@
-import {
-  ChessPiece,
-  GameState,
-  Move,
-  PieceColor,
-  PieceType,
+import { 
+  ChessPiece, 
+  GameState, 
+  PieceColor, 
+  PieceType, 
   Position,
-  isValidPosition
-} from "./chess-models";
+  isValidPosition,
+  Move
+} from './chess-models';
 
 // Get all valid moves for a piece
-export const getValidMoves = (
-  state: GameState,
-  position: Position
-): Position[] => {
-  const { board } = state;
+export const getValidMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
   const piece = board[position.row][position.col];
   
-  if (!piece) return [];
-  
-  let moves: Position[] = [];
+  if (!piece || piece.color !== currentPlayer) {
+    return [];
+  }
   
   switch (piece.type) {
     case PieceType.PAWN:
-      moves = getPawnMoves(state, position);
-      break;
-    case PieceType.KNIGHT:
-      moves = getKnightMoves(state, position);
-      break;
+      return getValidPawnMoves(gameState, position);
     case PieceType.ROOK:
-      moves = getRookMoves(state, position);
-      break;
-    case PieceType.QUEEN:
-      moves = getQueenMoves(state, position);
-      break;
-    case PieceType.KING:
-      moves = getKingMoves(state, position);
-      break;
-  }
-  
-  // Filter moves that would put or leave the king in check
-  return moves.filter(move => !wouldBeInCheck(state, position, move));
-};
-
-// Check if a move would leave the king in check
-const wouldBeInCheck = (
-  state: GameState, 
-  from: Position, 
-  to: Position
-): boolean => {
-  // Make a deep copy of the board
-  const newBoard = state.board.map(row => [...row]);
-  const movingPiece = newBoard[from.row][from.col];
-  
-  if (!movingPiece) return false;
-  
-  // Execute move on temporary board
-  newBoard[to.row][to.col] = movingPiece;
-  newBoard[from.row][from.col] = null;
-  
-  // Find the king
-  let kingPos: Position | null = null;
-  for (let row = 0; row < 6; row++) {
-    for (let col = 0; col < 6; col++) {
-      const piece = newBoard[row][col];
-      if (piece && piece.type === PieceType.KING && piece.color === movingPiece.color) {
-        kingPos = { row, col };
-        break;
-      }
-    }
-    if (kingPos) break;
-  }
-  
-  if (!kingPos) return false; // This shouldn't happen in a valid game
-  
-  // Check if any opponent piece can capture the king
-  for (let row = 0; row < 6; row++) {
-    for (let col = 0; col < 6; col++) {
-      const piece = newBoard[row][col];
-      if (piece && piece.color !== movingPiece.color) {
-        const attackMoves = getRawMoves({ ...state, board: newBoard }, { row, col });
-        if (attackMoves.some(move => move.row === kingPos!.row && move.col === kingPos!.col)) {
-          return true; // King would be in check
-        }
-      }
-    }
-  }
-  
-  return false;
-};
-
-// Get raw moves without checking for checks
-const getRawMoves = (state: GameState, position: Position): Position[] => {
-  const { board } = state;
-  const piece = board[position.row][position.col];
-  
-  if (!piece) return [];
-  
-  switch (piece.type) {
-    case PieceType.PAWN:
-      return getPawnMoves(state, position, true);
+      return getValidRookMoves(gameState, position);
     case PieceType.KNIGHT:
-      return getKnightMoves(state, position, true);
-    case PieceType.ROOK:
-      return getRookMoves(state, position, true);
+      return getValidKnightMoves(gameState, position);
     case PieceType.QUEEN:
-      return getQueenMoves(state, position, true);
+      return getValidQueenMoves(gameState, position);
     case PieceType.KING:
-      return getKingMoves(state, position, true);
+      return getValidKingMoves(gameState, position);
     default:
       return [];
   }
 };
 
 // Get valid moves for a pawn
-const getPawnMoves = (
-  state: GameState, 
-  position: Position,
-  rawMoves = false
-): Position[] => {
-  const { board } = state;
-  const piece = board[position.row][position.col];
+const getValidPawnMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const { row, col } = position;
+  const validMoves: Position[] = [];
   
-  if (!piece || piece.type !== PieceType.PAWN) return [];
+  const direction = currentPlayer === PieceColor.WHITE ? 1 : -1;
+  const startingRow = currentPlayer === PieceColor.WHITE ? 1 : 4;
   
-  const moves: Position[] = [];
-  const direction = piece.color === PieceColor.WHITE ? 1 : -1;
-  const startRow = piece.color === PieceColor.WHITE ? 1 : 4;
-  
-  // Forward move
-  const forwardPos = { row: position.row + direction, col: position.col };
-  if (isValidPosition(forwardPos) && !board[forwardPos.row][forwardPos.col]) {
-    moves.push(forwardPos);
+  // One square forward
+  const oneSquareForward: Position = { row: row + direction, col };
+  if (isValidPosition(oneSquareForward) && !board[oneSquareForward.row][oneSquareForward.col]) {
+    validMoves.push(oneSquareForward);
     
-    // Double move from starting position
-    if (position.row === startRow) {
-      const doublePos = { row: position.row + 2 * direction, col: position.col };
-      if (isValidPosition(doublePos) && !board[doublePos.row][doublePos.col]) {
-        moves.push(doublePos);
+    // Two squares forward from starting position
+    if (row === startingRow) {
+      const twoSquaresForward: Position = { row: row + 2 * direction, col };
+      if (isValidPosition(twoSquaresForward) && !board[twoSquaresForward.row][twoSquaresForward.col]) {
+        validMoves.push(twoSquaresForward);
       }
     }
   }
   
-  // Captures
-  const capturePositions = [
-    { row: position.row + direction, col: position.col - 1 },
-    { row: position.row + direction, col: position.col + 1 }
+  // Capture diagonally
+  const capturePositions: Position[] = [
+    { row: row + direction, col: col - 1 },
+    { row: row + direction, col: col + 1 }
   ];
   
-  for (const capturePos of capturePositions) {
+  capturePositions.forEach(capturePos => {
     if (isValidPosition(capturePos)) {
       const targetPiece = board[capturePos.row][capturePos.col];
-      if (targetPiece && targetPiece.color !== piece.color) {
-        moves.push(capturePos);
+      if (targetPiece && targetPiece.color !== currentPlayer) {
+        validMoves.push(capturePos);
       }
     }
-  }
+  });
   
-  return moves;
-};
-
-// Get valid moves for a knight
-const getKnightMoves = (
-  state: GameState, 
-  position: Position,
-  rawMoves = false
-): Position[] => {
-  const { board } = state;
-  const piece = board[position.row][position.col];
-  
-  if (!piece || piece.type !== PieceType.KNIGHT) return [];
-  
-  const knightOffsets = [
-    { row: -2, col: -1 }, { row: -2, col: 1 },
-    { row: -1, col: -2 }, { row: -1, col: 2 },
-    { row: 1, col: -2 }, { row: 1, col: 2 },
-    { row: 2, col: -1 }, { row: 2, col: 1 }
-  ];
-  
-  return knightOffsets
-    .map(offset => ({
-      row: position.row + offset.row,
-      col: position.col + offset.col
-    }))
-    .filter(pos => 
-      isValidPosition(pos) && 
-      (!board[pos.row][pos.col] || board[pos.row][pos.col]?.color !== piece.color)
-    );
+  return validMoves;
 };
 
 // Get valid moves for a rook
-const getRookMoves = (
-  state: GameState, 
-  position: Position,
-  rawMoves = false
-): Position[] => {
-  const { board } = state;
-  const piece = board[position.row][position.col];
+const getValidRookMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const { row, col } = position;
+  const validMoves: Position[] = [];
   
-  if (!piece || piece.type !== PieceType.ROOK) return [];
-  
-  const moves: Position[] = [];
   const directions = [
-    { row: -1, col: 0 }, // Up
     { row: 1, col: 0 },  // Down
-    { row: 0, col: -1 }, // Left
-    { row: 0, col: 1 }   // Right
+    { row: -1, col: 0 }, // Up
+    { row: 0, col: 1 },  // Right
+    { row: 0, col: -1 }   // Left
   ];
   
-  for (const direction of directions) {
-    let currentRow = position.row + direction.row;
-    let currentCol = position.col + direction.col;
-    
-    while (isValidPosition({ row: currentRow, col: currentCol })) {
-      const targetPiece = board[currentRow][currentCol];
+  directions.forEach(dir => {
+    for (let i = 1; i < 6; i++) {
+      const newPos: Position = { row: row + i * dir.row, col: col + i * dir.col };
+      if (!isValidPosition(newPos)) break;
       
+      const targetPiece = board[newPos.row][newPos.col];
       if (!targetPiece) {
-        // Empty square, we can move here
-        moves.push({ row: currentRow, col: currentCol });
-      } else if (targetPiece.color !== piece.color) {
-        // Opponent's piece, we can capture it but can't go further
-        moves.push({ row: currentRow, col: currentCol });
-        break;
+        validMoves.push(newPos);
       } else {
-        // Our own piece, we can't move here
+        if (targetPiece.color !== currentPlayer) {
+          validMoves.push(newPos);
+        }
         break;
       }
-      
-      currentRow += direction.row;
-      currentCol += direction.col;
     }
-  }
+  });
   
-  return moves;
+  return validMoves;
 };
 
-// Get valid moves for a queen (combination of rook and bishop)
-const getQueenMoves = (
-  state: GameState, 
-  position: Position,
-  rawMoves = false
-): Position[] => {
-  const { board } = state;
-  const piece = board[position.row][position.col];
+// Get valid moves for a knight
+const getValidKnightMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const { row, col } = position;
+  const validMoves: Position[] = [];
   
-  if (!piece || piece.type !== PieceType.QUEEN) return [];
-  
-  const moves: Position[] = [];
-  const directions = [
-    { row: -1, col: 0 },  // Up
-    { row: 1, col: 0 },   // Down
-    { row: 0, col: -1 },  // Left
-    { row: 0, col: 1 },   // Right
-    { row: -1, col: -1 }, // Up-Left
-    { row: -1, col: 1 },  // Up-Right
-    { row: 1, col: -1 },  // Down-Left
-    { row: 1, col: 1 }    // Down-Right
+  const knightMoves = [
+    { row: 2, col: 1 },
+    { row: 2, col: -1 },
+    { row: -2, col: 1 },
+    { row: -2, col: -1 },
+    { row: 1, col: 2 },
+    { row: 1, col: -2 },
+    { row: -1, col: 2 },
+    { row: -1, col: -2 }
   ];
   
-  for (const direction of directions) {
-    let currentRow = position.row + direction.row;
-    let currentCol = position.col + direction.col;
-    
-    while (isValidPosition({ row: currentRow, col: currentCol })) {
-      const targetPiece = board[currentRow][currentCol];
-      
-      if (!targetPiece) {
-        // Empty square, we can move here
-        moves.push({ row: currentRow, col: currentCol });
-      } else if (targetPiece.color !== piece.color) {
-        // Opponent's piece, we can capture it but can't go further
-        moves.push({ row: currentRow, col: currentCol });
-        break;
-      } else {
-        // Our own piece, we can't move here
-        break;
+  knightMoves.forEach(move => {
+    const newPos: Position = { row: row + move.row, col: col + move.col };
+    if (isValidPosition(newPos)) {
+      const targetPiece = board[newPos.row][newPos.col];
+      if (!targetPiece || targetPiece.color !== currentPlayer) {
+        validMoves.push(newPos);
       }
-      
-      currentRow += direction.row;
-      currentCol += direction.col;
     }
-  }
+  });
   
-  return moves;
+  return validMoves;
+};
+
+// Get valid moves for a queen
+const getValidQueenMoves = (gameState: GameState, position: Position): Position[] => {
+  const rookMoves = getValidRookMoves(gameState, position);
+  const bishopMoves: Position[] = getValidBishopMoves(gameState, position); // Ensure this function exists
+  
+  return [...rookMoves, ...bishopMoves];
 };
 
 // Get valid moves for a king
-const getKingMoves = (
-  state: GameState, 
-  position: Position,
-  rawMoves = false
-): Position[] => {
-  const { board } = state;
-  const piece = board[position.row][position.col];
+const getValidKingMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const { row, col } = position;
+  const validMoves: Position[] = [];
   
-  if (!piece || piece.type !== PieceType.KING) return [];
-  
-  const kingOffsets = [
-    { row: -1, col: -1 }, { row: -1, col: 0 }, { row: -1, col: 1 },
-    { row: 0, col: -1 },                       { row: 0, col: 1 },
-    { row: 1, col: -1 },  { row: 1, col: 0 },  { row: 1, col: 1 }
+  const kingMoves = [
+    { row: 1, col: 0 },
+    { row: -1, col: 0 },
+    { row: 0, col: 1 },
+    { row: 0, col: -1 },
+    { row: 1, col: 1 },
+    { row: 1, col: -1 },
+    { row: -1, col: 1 },
+    { row: -1, col: -1 }
   ];
   
-  const moves = kingOffsets
-    .map(offset => ({
-      row: position.row + offset.row,
-      col: position.col + offset.col
-    }))
-    .filter(pos => 
-      isValidPosition(pos) && 
-      (!board[pos.row][pos.col] || board[pos.row][pos.col]?.color !== piece.color)
-    );
-    
-  // If we're just getting raw moves (e.g., to check for attacks), return now
-  if (rawMoves) return moves;
+  kingMoves.forEach(move => {
+    const newPos: Position = { row: row + move.row, col: col + move.col };
+    if (isValidPosition(newPos)) {
+      const targetPiece = board[newPos.row][newPos.col];
+      if (!targetPiece || targetPiece.color !== currentPlayer) {
+        validMoves.push(newPos);
+      }
+    }
+  });
   
-  return moves;
+  return validMoves;
 };
 
-// Check if the king is in check
-export const isInCheck = (state: GameState, color: PieceColor): boolean => {
-  const { board } = state;
+// Get valid moves for a bishop
+const getValidBishopMoves = (gameState: GameState, position: Position): Position[] => {
+    const { board, currentPlayer } = gameState;
+    const { row, col } = position;
+    const validMoves: Position[] = [];
+
+    const directions = [
+        { row: 1, col: 1 },  // Down-Right
+        { row: 1, col: -1 }, // Down-Left
+        { row: -1, col: 1 }, // Up-Right
+        { row: -1, col: -1 }  // Up-Left
+    ];
+
+    directions.forEach(dir => {
+        for (let i = 1; i < 6; i++) {
+            const newPos: Position = { row: row + i * dir.row, col: col + i * dir.col };
+            if (!isValidPosition(newPos)) break;
+
+            const targetPiece = board[newPos.row][newPos.col];
+            if (!targetPiece) {
+                validMoves.push(newPos);
+            } else {
+                if (targetPiece.color !== currentPlayer) {
+                    validMoves.push(newPos);
+                }
+                break;
+            }
+        }
+    });
+
+    return validMoves;
+};
+
+// Make a move
+export const makeMove = (
+  gameState: GameState, 
+  from: Position, 
+  to: Position,
+  promoteTo?: PieceType
+): GameState => {
+  const { board, currentPlayer, pieceBank } = gameState;
   
-  // Find the king
-  let kingPos: Position | null = null;
+  // Copy the board to create a new board state
+  const newBoard = board.map(row => [...row]);
+  
+  // Get the moving piece and the target piece
+  const movingPiece = newBoard[from.row][from.col];
+  const targetPiece = newBoard[to.row][to.col];
+  
+  if (!movingPiece) {
+    console.error('No piece at source position');
+    return gameState;
+  }
+  
+  // Move the piece
+  newBoard[to.row][to.col] = { ...movingPiece, hasMoved: true };
+  newBoard[from.row][from.col] = null;
+  
+  // Handle pawn promotion
+  if (promoteTo && movingPiece.type === PieceType.PAWN) {
+    newBoard[to.row][to.col] = { 
+      ...movingPiece, 
+      type: promoteTo,
+      hasMoved: true
+    };
+  }
+  
+  // Handle capturing a piece
+  let updatedPieceBank = { ...pieceBank };
+  if (targetPiece) {
+    const opponentColor = targetPiece.color;
+    updatedPieceBank = {
+      ...pieceBank,
+      [opponentColor]: [...pieceBank[opponentColor], targetPiece]
+    };
+  }
+  
+  // Create the move record
+  const move: Move = {
+    from,
+    to,
+    piece: movingPiece,
+    capturedPiece: targetPiece,
+    isPromotion: !!promoteTo,
+    promoteTo: promoteTo,
+  };
+  
+  // Update game state
+  const newGameState: GameState = {
+    ...gameState,
+    board: newBoard,
+    currentPlayer: currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
+    moveHistory: [...gameState.moveHistory, move],
+    selectedPiece: null,
+    validMoves: [],
+    pieceBank: updatedPieceBank,
+    lastMove: move,
+  };
+  
+  // Check if the move results in a check
+  const isCheck = isKingInCheck(newGameState);
+  newGameState.isCheck = isCheck;
+  
+  // Check if the move results in a checkmate or stalemate
+  const isCheckmate = isCheck && checkIfCheckmate(newGameState);
+  newGameState.isCheckmate = isCheckmate;
+
+  const isStalemate = !isCheck && checkIfStalemate(newGameState);
+  newGameState.isStalemate = isStalemate;
+  
+  return newGameState;
+};
+
+// Check if the current player's king is in check
+export const isKingInCheck = (gameState: GameState): boolean => {
+  const { board, currentPlayer } = gameState;
+  
+  // Find the king's position
+  let kingPosition: Position | null = null;
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
-      if (piece && piece.type === PieceType.KING && piece.color === color) {
-        kingPos = { row, col };
+      if (piece?.type === PieceType.KING && piece?.color === currentPlayer) {
+        kingPosition = { row, col };
         break;
       }
     }
-    if (kingPos) break;
+    if (kingPosition) break;
   }
   
-  if (!kingPos) return false; // This shouldn't happen in a valid game
+  if (!kingPosition) {
+    console.error('King not found');
+    return false;
+  }
   
-  // Check if any opponent piece can capture the king
+  // Check if any opponent's piece can attack the king
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
-      if (piece && piece.color !== color) {
-        const attackMoves = getRawMoves(state, { row, col });
-        if (attackMoves.some(move => 
-          move.row === kingPos!.row && move.col === kingPos!.col
-        )) {
-          return true; // King is in check
+      if (piece && piece.color !== currentPlayer) {
+        const validMoves = getValidMoves({ ...gameState, currentPlayer: piece.color }, { row, col });
+        if (validMoves.some(move => move.row === kingPosition!.row && move.col === kingPosition!.col)) {
+          return true;
         }
       }
     }
@@ -355,65 +327,72 @@ export const isInCheck = (state: GameState, color: PieceColor): boolean => {
 };
 
 // Check if the current player is in checkmate
-export const isCheckmate = (state: GameState): boolean => {
-  const { currentPlayer } = state;
+export const checkIfCheckmate = (gameState: GameState): boolean => {
+  const { currentPlayer, board } = gameState;
   
-  // If not in check, can't be checkmate
-  if (!isInCheck(state, currentPlayer)) return false;
-  
-  // Check if any piece of the current player has a valid move
+  // Iterate through all pieces of the current player
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
-      const piece = state.board[row][col];
+      const piece = board[row][col];
       if (piece && piece.color === currentPlayer) {
-        const moves = getValidMoves(state, { row, col });
-        if (moves.length > 0) {
-          return false; // Player has at least one valid move
+        const position: Position = { row, col };
+        const validMoves = getValidMoves(gameState, position);
+        
+        // If there's any valid move that gets the king out of check, it's not checkmate
+        for (const move of validMoves) {
+          const newState = makeMove(gameState, position, move);
+          if (!isKingInCheck(newState)) {
+            return false;
+          }
         }
       }
     }
   }
   
-  return true; // No valid moves and in check = checkmate
+  return true;
 };
 
 // Check if the current player is in stalemate
-export const isStalemate = (state: GameState): boolean => {
-  const { currentPlayer } = state;
-  
-  // If in check, it's not stalemate
-  if (isInCheck(state, currentPlayer)) return false;
-  
-  // Check if any piece of the current player has a valid move
+export const checkIfStalemate = (gameState: GameState): boolean => {
+  const { currentPlayer, board } = gameState;
+
+  // Iterate through all pieces of the current player
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
-      const piece = state.board[row][col];
+      const piece = board[row][col];
       if (piece && piece.color === currentPlayer) {
-        const moves = getValidMoves(state, { row, col });
-        if (moves.length > 0) {
-          return false; // Player has at least one valid move
+        const position: Position = { row, col };
+        const validMoves = getValidMoves(gameState, position);
+
+        // If there's any valid move, it's not stalemate
+        if (validMoves.length > 0) {
+          return false;
         }
       }
     }
   }
-  
-  return true; // No valid moves and not in check = stalemate
+
+  // If the king is not in check and there are no valid moves, it's stalemate
+  return !isKingInCheck(gameState);
 };
 
-// Get valid squares for dropping a piece
-export const getValidDropSquares = (
-  state: GameState,
-  piece: ChessPieceType
-): Position[] => {
-  const { board } = state;
+// Add these functions to support the piece dropping feature
+export const getValidDropSquares = (gameState: GameState, piece: ChessPiece): Position[] => {
+  const { board, currentPlayer } = gameState;
   const validSquares: Position[] = [];
 
+  // Pawns can't be dropped on the first or last rank
+  const isFirstOrLastRank = (row: number): boolean => {
+    return row === 0 || row === 5;
+  };
+
+  // Check each square on the board
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       // Square must be empty
       if (board[row][col] === null) {
         // Pawns can't be dropped on the first or last rank
-        if (piece.type === PieceType.PAWN && (row === 0 || row === 5)) {
+        if (piece.type === PieceType.PAWN && isFirstOrLastRank(row)) {
           continue;
         }
         validSquares.push({ row, col });
@@ -424,158 +403,56 @@ export const getValidDropSquares = (
   return validSquares;
 };
 
-// Drop a piece from the piece bank
-export const dropPiece = (
-  state: GameState,
-  piece: ChessPieceType,
-  position: Position
-): GameState => {
-  // Create deep copies
-  const newBoard = state.board.map(row => [...row]);
-  const newPieceBank = {
-    [PieceColor.WHITE]: [...state.pieceBank[PieceColor.WHITE]],
-    [PieceColor.BLACK]: [...state.pieceBank[PieceColor.BLACK]]
-  };
-
-  // Remove the first piece of this type from the bank
-  const bankPieces = newPieceBank[state.currentPlayer];
-  const pieceIndex = bankPieces.findIndex(p => p.type === piece.type);
-  if (pieceIndex === -1) return state;
-  bankPieces.splice(pieceIndex, 1);
-
-  // Place the piece
-  newBoard[position.row][position.col] = {
-    ...piece,
-    color: state.currentPlayer,
-    hasMoved: true
-  };
-
-  // Create the new state
-  const newState: GameState = {
-    ...state,
-    board: newBoard,
-    pieceBank: newPieceBank,
-    currentPlayer: state.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
-    selectedPiece: null,
-    validMoves: [],
-    isDroppingPiece: false,
-    lastMove: {
-      piece,
-      from: { row: -1, col: -1 }, // Special coordinates to indicate a drop
-      to: position,
-      isDropped: true
-    }
-  };
-
-  // Check if this drop results in check
-  newState.isCheck = isInCheck(newState, newState.currentPlayer);
-  if (newState.isCheck) {
-    newState.isCheckmate = isCheckmate(newState);
-    newState.lastMove = {
-      ...newState.lastMove,
-      isCheck: true,
-      isCheckmate: newState.isCheckmate
-    };
-  } else {
-    newState.isStalemate = isStalemate(newState);
-  }
-
-  return newState;
-};
-
-// Make a move and return the new game state
-export const makeMove = (
-  state: GameState,
-  from: Position,
-  to: Position,
-  promoteTo?: PieceType
-): GameState => {
-  const { board, currentPlayer, moveHistory } = state;
-  const piece = board[from.row][from.col];
+export const dropPiece = (gameState: GameState, piece: ChessPiece, position: Position): GameState => {
+  const newGameState = { ...gameState };
+  const { board, pieceBank, currentPlayer } = newGameState;
   
-  if (!piece || piece.color !== currentPlayer) {
-    return state; // Invalid move
-  }
-  
-  // Create a deep copy of the board and piece bank
+  // Create a new board with the piece dropped
   const newBoard = board.map(row => [...row]);
-  const newPieceBank = {
-    [PieceColor.WHITE]: [...state.pieceBank[PieceColor.WHITE]],
-    [PieceColor.BLACK]: [...state.pieceBank[PieceColor.BLACK]]
+  
+  // Create a unique ID for the dropped piece
+  const uniqueId = `${piece.color}-${piece.type}-${Date.now()}`;
+  
+  // Create the new piece with the unique ID
+  const droppedPiece: ChessPiece = {
+    ...piece,
+    id: uniqueId,
+    hasMoved: true,
   };
   
-  // Capture logic - add to piece bank
-  const capturedPiece = newBoard[to.row][to.col];
-  if (capturedPiece) {
-    const convertedPiece = {
-      ...capturedPiece,
-      color: currentPlayer,
-      id: `captured-${Date.now()}-${capturedPiece.id}`,
-      hasMoved: true
-    };
-    newPieceBank[currentPlayer].push(convertedPiece);
-  }
-
-  // Special handling for pawn promotion
-  let isPromotion = false;
-  if (piece.type === PieceType.PAWN && 
-      ((piece.color === PieceColor.WHITE && to.row === 5) || 
-       (piece.color === PieceColor.BLACK && to.row === 0))) {
-    isPromotion = true;
-    // If no promotion piece specified, default to Queen
-    const promotionType = promoteTo || PieceType.QUEEN;
-    newBoard[to.row][to.col] = {
-      ...piece,
-      type: promotionType,
-      hasMoved: true
-    };
-  } else {
-    // Regular move
-    newBoard[to.row][to.col] = {
-      ...piece,
-      hasMoved: true
-    };
+  // Place the piece on the board
+  newBoard[position.row][position.col] = droppedPiece;
+  
+  // Remove the piece from the piece bank
+  const newPieceBank = { ...pieceBank };
+  const pieceBankForCurrentPlayer = [...newPieceBank[currentPlayer]];
+  
+  // Find the index of the first piece of the same type
+  const pieceIndex = pieceBankForCurrentPlayer.findIndex(p => p.type === piece.type);
+  
+  if (pieceIndex !== -1) {
+    pieceBankForCurrentPlayer.splice(pieceIndex, 1);
+    newPieceBank[currentPlayer] = pieceBankForCurrentPlayer;
   }
   
-  // Clear the original position
-  newBoard[from.row][from.col] = null;
+  // Create the move record
+  const move: Move = {
+    from: { row: -1, col: -1 }, // Special marker for dropped pieces
+    to: position,
+    piece: droppedPiece,
+    isDropped: true,
+  };
   
-  // Prepare the new game state
-  const newState: GameState = {
-    ...state,
+  // Update game state
+  return {
+    ...newGameState,
     board: newBoard,
     pieceBank: newPieceBank,
     currentPlayer: currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
+    moveHistory: [...newGameState.moveHistory, move],
     selectedPiece: null,
     validMoves: [],
-    lastMove: {
-      from,
-      to,
-      piece,
-      capturedPiece: capturedPiece || undefined,
-      isPromotion,
-      promoteTo: isPromotion ? (promoteTo || PieceType.QUEEN) : undefined
-    }
+    lastMove: move,
+    isDroppingPiece: false,
   };
-  
-  // Check if the move results in check
-  const isInCheckNow = isInCheck(newState, newState.currentPlayer);
-  newState.isCheck = isInCheckNow;
-  
-  // Check for checkmate or stalemate
-  if (isInCheckNow) {
-    newState.isCheckmate = isCheckmate(newState);
-    newState.lastMove = {
-      ...newState.lastMove,
-      isCheck: true,
-      isCheckmate: newState.isCheckmate
-    };
-  } else {
-    newState.isStalemate = isStalemate(newState);
-  }
-  
-  // Add the move to history
-  newState.moveHistory = [...moveHistory, newState.lastMove!];
-  
-  return newState;
 };

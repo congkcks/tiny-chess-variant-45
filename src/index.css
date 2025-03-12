@@ -93,7 +93,7 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-[#312e2b] text-foreground font-sans;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -122,20 +122,20 @@
 
   .chess-square.valid-move {
     @apply before:absolute before:w-3/5 before:h-3/5 before:rounded-full 
-           before:bg-board-highlight before:opacity-70 before:z-10;
+           before:bg-[rgba(0,255,0,0.2)] before:opacity-70 before:z-10;
   }
 
   .chess-square.check {
-    @apply bg-board-check;
+    @apply bg-[rgba(255,0,0,0.3)];
   }
 
   .chess-square.last-move {
-    @apply bg-board-lastMove;
+    @apply bg-[rgba(255,255,0,0.2)];
   }
 }
 
 .glass-panel {
-  @apply bg-white/80 dark:bg-black/50 backdrop-blur-lg rounded-2xl border border-white/20 dark:border-white/10 shadow-lg;
+  @apply bg-[#272421] backdrop-blur-lg rounded-md border border-[#3d3934] shadow-lg;
 }
 
 .slide-enter {
@@ -147,6 +147,15 @@
   transform: translateY(0);
   opacity: 1;
   transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* Chess.com style squares */
+.bg-board-light {
+  background-color: #eee;
+}
+
+.bg-board-dark {
+  background-color: #769656;
 }
 
 /* Animations for piece movements */
