@@ -1,3 +1,4 @@
+
 import { 
   ChessPiece, 
   GameState, 
@@ -245,10 +246,17 @@ export const makeMove = (
   // Handle capturing a piece
   let updatedPieceBank = { ...pieceBank };
   if (targetPiece) {
-    const opponentColor = targetPiece.color;
+    // Change the captured piece's color to the capturing player's color
+    const capturedPiece = {
+      ...targetPiece,
+      color: currentPlayer, // Change color to the current player
+      id: `captured-${targetPiece.type}-${Date.now()}`, // Create a new ID
+      hasMoved: true // Mark as moved
+    };
+    
     updatedPieceBank = {
       ...pieceBank,
-      [opponentColor]: [...pieceBank[opponentColor], targetPiece]
+      [currentPlayer]: [...pieceBank[currentPlayer], capturedPiece]
     };
   }
   
