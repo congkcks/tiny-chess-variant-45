@@ -1,3 +1,4 @@
+
 // Chess piece types
 export enum PieceType {
   KING = 'king',
@@ -37,6 +38,7 @@ export interface Move {
   promoteTo?: PieceType;
   isCheck?: boolean;
   isCheckmate?: boolean;
+  isDropped?: boolean;
 }
 
 // Store captured pieces that can be dropped back

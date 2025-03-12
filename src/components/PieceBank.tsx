@@ -6,7 +6,7 @@ import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
 interface PieceBankProps {
-  pieces: ChessPiece[];
+  pieces: ChessPieceType[];
   color: PieceColor;
   onPieceSelect: (piece: ChessPieceType) => void;
   isActive: boolean;
@@ -21,12 +21,12 @@ const PieceBank: FC<PieceBankProps> = ({
   className 
 }) => {
   // Group pieces by type for better display
-  const groupedPieces = pieces.reduce((acc, piece) => {
+  const groupedPieces = pieces.reduce<Record<PieceType, ChessPieceType[]>>((acc, piece) => {
     const key = piece.type;
     if (!acc[key]) acc[key] = [];
     acc[key].push(piece);
     return acc;
-  }, {} as { [key in PieceType]?: ChessPieceType[] });
+  }, {} as Record<PieceType, ChessPieceType[]>);
 
   return (
     <motion.div 
