@@ -1,4 +1,3 @@
-
 // Chess piece types
 export enum PieceType {
   KING = 'king',
@@ -40,6 +39,12 @@ export interface Move {
   isCheckmate?: boolean;
 }
 
+// Store captured pieces that can be dropped back
+export interface PieceBank {
+  [PieceColor.WHITE]: ChessPiece[];
+  [PieceColor.BLACK]: ChessPiece[];
+}
+
 // Game state
 export interface GameState {
   board: (ChessPiece | null)[][];
@@ -51,6 +56,8 @@ export interface GameState {
   isCheckmate: boolean;
   isStalemate: boolean;
   lastMove: Move | null;
+  pieceBank: PieceBank;
+  isDroppingPiece?: boolean;
 }
 
 // Game initialization
@@ -103,7 +110,11 @@ export const createInitialGameState = (): GameState => {
     isCheck: false,
     isCheckmate: false,
     isStalemate: false,
-    lastMove: null
+    lastMove: null,
+    pieceBank: {
+      [PieceColor.WHITE]: [],
+      [PieceColor.BLACK]: []
+    }
   };
 };
 

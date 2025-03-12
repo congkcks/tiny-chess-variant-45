@@ -1,6 +1,6 @@
-
 import { FC, useState, useEffect } from 'react';
 import ChessPiece from './ChessPiece';
+import PieceBank from './PieceBank';
 import { 
   ChessPiece as ChessPieceType, 
   GameState, 
@@ -9,7 +9,7 @@ import {
   Position,
   positionToAlgebraic
 } from '@/lib/chess-models';
-import { getValidMoves, makeMove } from '@/lib/chess-logic';
+import { getValidMoves, makeMove, getValidDropSquares, dropPiece } from '@/lib/chess-logic';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
@@ -30,6 +30,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [validMoves, setValidMoves] = useState<Position[]>([]);
   const [promotionPosition, setPromotionPosition] = useState<Position | null>(null);
+  const [isDroppingPiece, setIsDroppingPiece] = useState<ChessPieceType | null>(null);
 
   // Handle board orientation based on perspective
   const boardRows = [...Array(6).keys()];
@@ -46,9 +47,36 @@ const ChessBoard: FC<ChessBoardProps> = ({
     setValidMoves([]);
   }, [gameState.currentPlayer]);
 
+  // Handle selecting a piece from the piece bank
+  const handlePieceBankSelect = (piece: ChessPieceType) => {
+    setSelectedPosition(null);
+    setIsDroppingPiece(piece);
+    const validDropSquares = getValidDropSquares(gameState, piece);
+    setValidMoves(validDropSquares);
+  };
+
   // Handle click on a board square
   const handleSquareClick = (position: Position) => {
     const { board, currentPlayer } = gameState;
+
+    // If dropping a piece
+    if (isDroppingPiece) {
+      if (validMoves.some(move => move.row === position.row && move.col === position.col)) {
+        const newState = dropPiece(gameState, isDroppingPiece, position);
+        onMove(newState);
+        
+        if (newState.isCheckmate) {
+          const winner = currentPlayer === PieceColor.WHITE ? 'White' : 'Black';
+          toast.success(`Checkmate! ${winner} wins!`);
+        } else if (newState.isCheck) {
+          toast.warning('Check!');
+        }
+      }
+      setIsDroppingPiece(null);
+      setValidMoves([]);
+      return;
+    }
+
     const piece = board[position.row][position.col];
 
     // If we're waiting for promotion selection, ignore other clicks
@@ -162,7 +190,18 @@ const ChessBoard: FC<ChessBoardProps> = ({
   };
 
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col md:flex-row items-start gap-4">
+      {/* White's piece bank (shown at bottom for white's perspective, top for black's) */}
+      {perspective === PieceColor.BLACK && (
+        <PieceBank
+          pieces={gameState.pieceBank[PieceColor.WHITE]}
+          color={PieceColor.WHITE}
+          onPieceSelect={handlePieceBankSelect}
+          isActive={gameState.currentPlayer === PieceColor.WHITE}
+          className="md:w-48"
+        />
+      )}
+
       <div className="relative w-full max-w-md aspect-square rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 p-2">
         <div className="w-full h-full grid grid-cols-6 grid-rows-6 relative">
           {/* Board squares */}
@@ -248,6 +287,17 @@ const ChessBoard: FC<ChessBoardProps> = ({
           })}
         </div>
       </div>
+
+      {/* Black's piece bank (shown at top for white's perspective, bottom for black's) */}
+      {perspective === PieceColor.WHITE && (
+        <PieceBank
+          pieces={gameState.pieceBank[PieceColor.BLACK]}
+          color={PieceColor.BLACK}
+          onPieceSelect={handlePieceBankSelect}
+          isActive={gameState.currentPlayer === PieceColor.BLACK}
+          className="md:w-48"
+        />
+      )}
       
       {/* Promotion selection UI */}
       {promotionPosition && (

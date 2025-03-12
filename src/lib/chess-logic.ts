@@ -1,4 +1,3 @@
-
 import {
   ChessPiece,
   GameState,
@@ -401,6 +400,89 @@ export const isStalemate = (state: GameState): boolean => {
   return true; // No valid moves and not in check = stalemate
 };
 
+// Get valid squares for dropping a piece
+export const getValidDropSquares = (
+  state: GameState,
+  piece: ChessPieceType
+): Position[] => {
+  const { board } = state;
+  const validSquares: Position[] = [];
+
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 6; col++) {
+      // Square must be empty
+      if (board[row][col] === null) {
+        // Pawns can't be dropped on the first or last rank
+        if (piece.type === PieceType.PAWN && (row === 0 || row === 5)) {
+          continue;
+        }
+        validSquares.push({ row, col });
+      }
+    }
+  }
+
+  return validSquares;
+};
+
+// Drop a piece from the piece bank
+export const dropPiece = (
+  state: GameState,
+  piece: ChessPieceType,
+  position: Position
+): GameState => {
+  // Create deep copies
+  const newBoard = state.board.map(row => [...row]);
+  const newPieceBank = {
+    [PieceColor.WHITE]: [...state.pieceBank[PieceColor.WHITE]],
+    [PieceColor.BLACK]: [...state.pieceBank[PieceColor.BLACK]]
+  };
+
+  // Remove the first piece of this type from the bank
+  const bankPieces = newPieceBank[state.currentPlayer];
+  const pieceIndex = bankPieces.findIndex(p => p.type === piece.type);
+  if (pieceIndex === -1) return state;
+  bankPieces.splice(pieceIndex, 1);
+
+  // Place the piece
+  newBoard[position.row][position.col] = {
+    ...piece,
+    color: state.currentPlayer,
+    hasMoved: true
+  };
+
+  // Create the new state
+  const newState: GameState = {
+    ...state,
+    board: newBoard,
+    pieceBank: newPieceBank,
+    currentPlayer: state.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
+    selectedPiece: null,
+    validMoves: [],
+    isDroppingPiece: false,
+    lastMove: {
+      piece,
+      from: { row: -1, col: -1 }, // Special coordinates to indicate a drop
+      to: position,
+      isDropped: true
+    }
+  };
+
+  // Check if this drop results in check
+  newState.isCheck = isInCheck(newState, newState.currentPlayer);
+  if (newState.isCheck) {
+    newState.isCheckmate = isCheckmate(newState);
+    newState.lastMove = {
+      ...newState.lastMove,
+      isCheck: true,
+      isCheckmate: newState.isCheckmate
+    };
+  } else {
+    newState.isStalemate = isStalemate(newState);
+  }
+
+  return newState;
+};
+
 // Make a move and return the new game state
 export const makeMove = (
   state: GameState,
@@ -415,12 +497,25 @@ export const makeMove = (
     return state; // Invalid move
   }
   
-  // Create a deep copy of the board
+  // Create a deep copy of the board and piece bank
   const newBoard = board.map(row => [...row]);
+  const newPieceBank = {
+    [PieceColor.WHITE]: [...state.pieceBank[PieceColor.WHITE]],
+    [PieceColor.BLACK]: [...state.pieceBank[PieceColor.BLACK]]
+  };
   
-  // Capture logic
+  // Capture logic - add to piece bank
   const capturedPiece = newBoard[to.row][to.col];
-  
+  if (capturedPiece) {
+    const convertedPiece = {
+      ...capturedPiece,
+      color: currentPlayer,
+      id: `captured-${Date.now()}-${capturedPiece.id}`,
+      hasMoved: true
+    };
+    newPieceBank[currentPlayer].push(convertedPiece);
+  }
+
   // Special handling for pawn promotion
   let isPromotion = false;
   if (piece.type === PieceType.PAWN && 
@@ -449,6 +544,7 @@ export const makeMove = (
   const newState: GameState = {
     ...state,
     board: newBoard,
+    pieceBank: newPieceBank,
     currentPlayer: currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
     selectedPiece: null,
     validMoves: [],
