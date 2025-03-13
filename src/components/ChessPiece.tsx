@@ -34,6 +34,24 @@ const ChessPiece: FC<ChessPieceProps> = ({
   );
 };
 
+// Add this new export function to get piece symbols
+export const getPieceSymbol = (type: PieceType, color: PieceColor): string => {
+  switch (type) {
+    case PieceType.KING:
+      return color === PieceColor.WHITE ? '♔' : '♚';
+    case PieceType.QUEEN:
+      return color === PieceColor.WHITE ? '♕' : '♛';
+    case PieceType.ROOK:
+      return color === PieceColor.WHITE ? '♖' : '♜';
+    case PieceType.KNIGHT:
+      return color === PieceColor.WHITE ? '♘' : '♞';
+    case PieceType.PAWN:
+      return color === PieceColor.WHITE ? '♙' : '♟';
+    default:
+      return '';
+  }
+};
+
 const renderPiece = (type: PieceType, color: PieceColor): JSX.Element => {
   const isWhite = color === PieceColor.WHITE;
   const fillColor = isWhite ? "#FFFFFF" : "#000000";
