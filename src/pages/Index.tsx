@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import ChessBoard from '@/components/ChessBoard';
 import MoveHistory from '@/components/MoveHistory';
@@ -6,7 +5,7 @@ import GameControls from '@/components/GameControls';
 import GameInfo from '@/components/GameInfo';
 import GameRules from '@/components/GameRules';
 import { Button } from '@/components/ui/button';
-import { QuestionMarkCircle } from 'lucide-react';
+import { HelpCircle } from 'lucide-react';
 import { 
   createInitialGameState, 
   GameState, 
@@ -69,7 +68,7 @@ const Index = () => {
             className="absolute right-0 top-0 text-gray-300 hover:text-white hover:bg-gray-700"
             onClick={() => setShowRules(true)}
           >
-            <QuestionMarkCircle size={20} />
+            <HelpCircle size={20} />
           </Button>
         </motion.header>
         
