@@ -1,4 +1,3 @@
-
 import { 
   ChessPiece, 
   GameState, 
@@ -25,6 +24,8 @@ export const getValidMoves = (gameState: GameState, position: Position): Positio
       return getValidRookMoves(gameState, position);
     case PieceType.KNIGHT:
       return getValidKnightMoves(gameState, position);
+    case PieceType.BISHOP:
+      return getValidBishopMoves(gameState, position);
     case PieceType.QUEEN:
       return getValidQueenMoves(gameState, position);
     case PieceType.KING:
@@ -40,8 +41,8 @@ const getValidPawnMoves = (gameState: GameState, position: Position): Position[]
   const { row, col } = position;
   const validMoves: Position[] = [];
   
+  // Direction is different for white and black pawns
   const direction = currentPlayer === PieceColor.WHITE ? 1 : -1;
-  const startingRow = currentPlayer === PieceColor.WHITE ? 1 : 4;
   
   // One square forward
   const oneSquareForward: Position = { row: row + direction, col };
@@ -49,7 +50,8 @@ const getValidPawnMoves = (gameState: GameState, position: Position): Position[]
     validMoves.push(oneSquareForward);
     
     // Two squares forward from starting position
-    if (row === startingRow) {
+    if ((currentPlayer === PieceColor.WHITE && row === 1) || 
+        (currentPlayer === PieceColor.BLACK && row === 4)) {
       const twoSquaresForward: Position = { row: row + 2 * direction, col };
       if (isValidPosition(twoSquaresForward) && !board[twoSquaresForward.row][twoSquaresForward.col]) {
         validMoves.push(twoSquaresForward);
@@ -386,7 +388,7 @@ export const checkIfStalemate = (gameState: GameState): boolean => {
 
 // Add these functions to support the piece dropping feature
 export const getValidDropSquares = (gameState: GameState, piece: ChessPiece): Position[] => {
-  const { board, currentPlayer } = gameState;
+  const { board } = gameState;
   const validSquares: Position[] = [];
 
   // Pawns can't be dropped on the first or last rank
