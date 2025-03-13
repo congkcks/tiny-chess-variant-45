@@ -83,7 +83,7 @@ const GameInfo: FC<GameInfoProps> = ({ gameState }) => {
         <div className="text-xs space-y-1">
           {Object.entries(whitePieces).map(([type, count]) => count > 0 && (
             <div key={`white-${type}`} className="flex items-center gap-1">
-              <span>{getPieceSymbol({ type: type as PieceType, color: PieceColor.WHITE })}</span>
+              <span>{getPieceSymbol(type as PieceType, PieceColor.WHITE)}</span>
               <span>×{count}</span>
             </div>
           ))}
@@ -91,7 +91,7 @@ const GameInfo: FC<GameInfoProps> = ({ gameState }) => {
         <div className="text-xs space-y-1">
           {Object.entries(blackPieces).map(([type, count]) => count > 0 && (
             <div key={`black-${type}`} className="flex items-center gap-1">
-              <span>{getPieceSymbol({ type: type as PieceType, color: PieceColor.BLACK })}</span>
+              <span>{getPieceSymbol(type as PieceType, PieceColor.BLACK)}</span>
               <span>×{count}</span>
             </div>
           ))}

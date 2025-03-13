@@ -34,7 +34,7 @@ const ChessPiece: FC<ChessPieceProps> = ({
   );
 };
 
-// Add this export function to get piece symbols
+// Export the function to get piece symbols
 export const getPieceSymbol = (type: PieceType, color: PieceColor): string => {
   switch (type) {
     case PieceType.KING:
