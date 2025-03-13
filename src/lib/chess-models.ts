@@ -1,10 +1,10 @@
-
 // Chess piece types
 export enum PieceType {
   KING = 'king',
   QUEEN = 'queen',
   ROOK = 'rook',
   KNIGHT = 'knight',
+  BISHOP = 'bishop',
   PAWN = 'pawn'
 }
 
@@ -67,7 +67,7 @@ export const createInitialBoard = (): (ChessPiece | null)[][] => {
   // Create 6x6 board
   const board: (ChessPiece | null)[][] = Array(6).fill(null).map(() => Array(6).fill(null));
   
-  // Set up pawns - 1 pawn for each player like in the image
+  // Setup pawns at opposite corners of the board
   board[1][5] = { 
     id: `white-pawn-0`, 
     type: PieceType.PAWN, 
@@ -81,19 +81,17 @@ export const createInitialBoard = (): (ChessPiece | null)[][] => {
     hasMoved: false
   };
   
-  // Set up other pieces for white - 1 King, 1 Rook, 1 Knight, 1 Bishop, 1 Queen
+  // Setup white pieces at bottom row (as shown in the image)
   board[0][0] = { id: 'white-king', type: PieceType.KING, color: PieceColor.WHITE, hasMoved: false };
   board[0][1] = { id: 'white-rook', type: PieceType.ROOK, color: PieceColor.WHITE, hasMoved: false };
   board[0][2] = { id: 'white-knight', type: PieceType.KNIGHT, color: PieceColor.WHITE, hasMoved: false };
-  board[0][3] = { id: 'white-bishop', type: PieceType.KNIGHT, color: PieceColor.WHITE, hasMoved: false };
-  board[0][4] = { id: 'white-queen', type: PieceType.QUEEN, color: PieceColor.WHITE, hasMoved: false };
+  board[0][3] = { id: 'white-bishop', type: PieceType.BISHOP, color: PieceColor.WHITE, hasMoved: false };
   
-  // Set up other pieces for black - 1 King, 1 Rook, 1 Knight, 1 Bishop, 1 Queen
-  board[5][0] = { id: 'black-rook', type: PieceType.ROOK, color: PieceColor.BLACK, hasMoved: false };
-  board[5][1] = { id: 'black-knight', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
-  board[5][2] = { id: 'black-bishop', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
-  board[5][3] = { id: 'black-queen', type: PieceType.QUEEN, color: PieceColor.BLACK, hasMoved: false };
-  board[5][4] = { id: 'black-king', type: PieceType.KING, color: PieceColor.BLACK, hasMoved: false };
+  // Setup black pieces at top row (as shown in the image)
+  board[5][3] = { id: 'black-bishop', type: PieceType.BISHOP, color: PieceColor.BLACK, hasMoved: false };
+  board[5][2] = { id: 'black-knight', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
+  board[5][1] = { id: 'black-rook', type: PieceType.ROOK, color: PieceColor.BLACK, hasMoved: false };
+  board[5][0] = { id: 'black-king', type: PieceType.KING, color: PieceColor.BLACK, hasMoved: false };
   
   return board;
 };

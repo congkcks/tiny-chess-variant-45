@@ -38,20 +38,21 @@ const GameRules: FC<GameRulesProps> = ({ onClose }) => {
           <div className="flex flex-col md:flex-row gap-6">
             <div className="md:w-1/2 space-y-4">
               <p className="font-semibold">Bàn cờ: 6x6, nhỏ hơn cờ vua truyền thống</p>
-              <p className="font-semibold">Quân cờ mỗi bên: 1 Vua, 1 Xe, 1 Tượng, 1 Mã, 1 Tốt (không có Hậu)</p>
+              <p className="font-semibold">Quân cờ mỗi bên: 1 Vua, 1 Xe, 1 Mã, 1 Tượng, 1 Tốt</p>
               <p>Di chuyển: Giống cờ vua tiêu chuẩn, nhưng trong phạm vi bàn cờ nhỏ.</p>
               <p className="font-semibold">Cơ chế thả quân: Khi bắt quân đối thủ, quân đó trở thành quân của người chơi và có thể được thả lại lên bàn cờ.</p>
               <p className="font-semibold">Thả quân:</p>
               <ul className="list-disc pl-6 space-y-2">
                 <li>Không được thả Tốt vào hàng cuối.</li>
                 <li>Tốt chỉ có 1 quân duy nhất, nên việc thả rất quan trọng.</li>
+                <li>Quân cờ bị bắt sẽ đổi màu và có thể thả lại vào bàn cờ.</li>
               </ul>
               <p>Kết thúc ván đấu: Chiếu bí đối phương hoặc hòa khi không còn nước đi hợp lệ.</p>
             </div>
             
             <div className="md:w-1/2 flex justify-center">
               <img 
-                src="/lovable-uploads/db452efa-02aa-4b61-a74e-14165daf2cf0.png"
+                src="/lovable-uploads/e2daecd7-a823-4892-a55d-067798709380.png"
                 alt="Minh họa bàn cờ 6x6" 
                 className="max-w-full rounded-lg border border-gray-200 shadow-md"
               />
