@@ -62,42 +62,38 @@ export interface GameState {
   isDroppingPiece?: boolean;
 }
 
-// Game initialization
+// Game initialization with 6x6 board and limited pieces as per image
 export const createInitialBoard = (): (ChessPiece | null)[][] => {
   // Create 6x6 board
   const board: (ChessPiece | null)[][] = Array(6).fill(null).map(() => Array(6).fill(null));
   
-  // Set up pawns
-  for (let col = 0; col < 6; col++) {
-    board[1][col] = { 
-      id: `white-pawn-${col}`, 
-      type: PieceType.PAWN, 
-      color: PieceColor.WHITE,
-      hasMoved: false
-    };
-    board[4][col] = { 
-      id: `black-pawn-${col}`, 
-      type: PieceType.PAWN, 
-      color: PieceColor.BLACK,
-      hasMoved: false
-    };
-  }
+  // Set up pawns - 1 pawn for each player like in the image
+  board[1][5] = { 
+    id: `white-pawn-0`, 
+    type: PieceType.PAWN, 
+    color: PieceColor.WHITE,
+    hasMoved: false
+  };
+  board[4][0] = { 
+    id: `black-pawn-0`, 
+    type: PieceType.PAWN, 
+    color: PieceColor.BLACK,
+    hasMoved: false
+  };
   
-  // Set up other pieces for white
-  board[0][0] = { id: 'white-rook-0', type: PieceType.ROOK, color: PieceColor.WHITE, hasMoved: false };
-  board[0][1] = { id: 'white-knight-0', type: PieceType.KNIGHT, color: PieceColor.WHITE, hasMoved: false };
-  board[0][2] = { id: 'white-queen', type: PieceType.QUEEN, color: PieceColor.WHITE, hasMoved: false };
-  board[0][3] = { id: 'white-king', type: PieceType.KING, color: PieceColor.WHITE, hasMoved: false };
-  board[0][4] = { id: 'white-knight-1', type: PieceType.KNIGHT, color: PieceColor.WHITE, hasMoved: false };
-  board[0][5] = { id: 'white-rook-1', type: PieceType.ROOK, color: PieceColor.WHITE, hasMoved: false };
+  // Set up other pieces for white - 1 King, 1 Rook, 1 Knight, 1 Bishop, 1 Queen
+  board[0][0] = { id: 'white-king', type: PieceType.KING, color: PieceColor.WHITE, hasMoved: false };
+  board[0][1] = { id: 'white-rook', type: PieceType.ROOK, color: PieceColor.WHITE, hasMoved: false };
+  board[0][2] = { id: 'white-knight', type: PieceType.KNIGHT, color: PieceColor.WHITE, hasMoved: false };
+  board[0][3] = { id: 'white-bishop', type: PieceType.KNIGHT, color: PieceColor.WHITE, hasMoved: false };
+  board[0][4] = { id: 'white-queen', type: PieceType.QUEEN, color: PieceColor.WHITE, hasMoved: false };
   
-  // Set up other pieces for black
-  board[5][0] = { id: 'black-rook-0', type: PieceType.ROOK, color: PieceColor.BLACK, hasMoved: false };
-  board[5][1] = { id: 'black-knight-0', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
-  board[5][2] = { id: 'black-king', type: PieceType.KING, color: PieceColor.BLACK, hasMoved: false };
+  // Set up other pieces for black - 1 King, 1 Rook, 1 Knight, 1 Bishop, 1 Queen
+  board[5][0] = { id: 'black-rook', type: PieceType.ROOK, color: PieceColor.BLACK, hasMoved: false };
+  board[5][1] = { id: 'black-knight', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
+  board[5][2] = { id: 'black-bishop', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
   board[5][3] = { id: 'black-queen', type: PieceType.QUEEN, color: PieceColor.BLACK, hasMoved: false };
-  board[5][4] = { id: 'black-knight-1', type: PieceType.KNIGHT, color: PieceColor.BLACK, hasMoved: false };
-  board[5][5] = { id: 'black-rook-1', type: PieceType.ROOK, color: PieceColor.BLACK, hasMoved: false };
+  board[5][4] = { id: 'black-king', type: PieceType.KING, color: PieceColor.BLACK, hasMoved: false };
   
   return board;
 };

@@ -21,12 +21,12 @@ const PieceBank: FC<PieceBankProps> = ({
   className 
 }) => {
   // Group pieces by type for better display
-  const groupedPieces = pieces.reduce<Record<PieceType, ChessPieceType[]>>((acc, piece) => {
+  const groupedPieces = pieces.reduce<Record<string, ChessPieceType[]>>((acc, piece) => {
     const key = piece.type;
     if (!acc[key]) acc[key] = [];
     acc[key].push(piece);
     return acc;
-  }, {} as Record<PieceType, ChessPieceType[]>);
+  }, {} as Record<string, ChessPieceType[]>);
 
   return (
     <motion.div 
@@ -40,7 +40,7 @@ const PieceBank: FC<PieceBankProps> = ({
       transition={{ duration: 0.3 }}
     >
       <h3 className="text-xs font-semibold mb-2 text-[#b8b0a2]">
-        {color === PieceColor.WHITE ? "White's" : "Black's"} Captured Pieces
+        {color === PieceColor.WHITE ? "Quân đã bắt" : "Quân đã bắt"}
       </h3>
       <div className="flex flex-wrap gap-1">
         {Object.entries(groupedPieces).map(([type, pieces]) => (

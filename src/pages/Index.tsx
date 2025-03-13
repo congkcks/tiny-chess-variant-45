@@ -4,17 +4,21 @@ import ChessBoard from '@/components/ChessBoard';
 import MoveHistory from '@/components/MoveHistory';
 import GameControls from '@/components/GameControls';
 import GameInfo from '@/components/GameInfo';
+import GameRules from '@/components/GameRules';
+import { Button } from '@/components/ui/button';
+import { QuestionMarkCircle } from 'lucide-react';
 import { 
   createInitialGameState, 
   GameState, 
   PieceColor
 } from '@/lib/chess-models';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const Index = () => {
   const [gameState, setGameState] = useState<GameState>(createInitialGameState());
   const [boardPerspective, setBoardPerspective] = useState<PieceColor>(PieceColor.WHITE);
   const [gameStateHistory, setGameStateHistory] = useState<GameState[]>([createInitialGameState()]);
+  const [showRules, setShowRules] = useState<boolean>(true);
   
   const handleMove = (newState: GameState) => {
     setGameState(newState);
@@ -48,7 +52,7 @@ const Index = () => {
     <div className="min-h-screen bg-[#312e2b] text-white p-4">
       <div className="max-w-5xl mx-auto">
         <motion.header 
-          className="text-center mb-4"
+          className="text-center mb-4 relative"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
@@ -57,8 +61,16 @@ const Index = () => {
             Chessmihouse 6×6
           </h1>
           <p className="text-gray-400 text-sm">
-            A chess.com inspired variant with Crazyhouse rules
+            Cờ vua 6x6 với luật Crazyhouse - thả quân đã bắt
           </p>
+          <Button 
+            variant="ghost" 
+            size="icon"
+            className="absolute right-0 top-0 text-gray-300 hover:text-white hover:bg-gray-700"
+            onClick={() => setShowRules(true)}
+          >
+            <QuestionMarkCircle size={20} />
+          </Button>
         </motion.header>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
@@ -94,6 +106,10 @@ const Index = () => {
           </motion.div>
         </div>
       </div>
+      
+      <AnimatePresence>
+        {showRules && <GameRules onClose={() => setShowRules(false)} />}
+      </AnimatePresence>
     </div>
   );
 };
