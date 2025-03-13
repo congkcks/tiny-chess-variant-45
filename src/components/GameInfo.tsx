@@ -77,8 +77,8 @@ const GameInfo: FC<GameInfoProps> = ({ gameState }) => {
           )}
         </div>
       </div>
-      
-      <div className="text-sm font-medium mb-2">Quân cờ:</div>
+
+      <div className="text-sm font-medium mb-2">Quân trên bàn cờ:</div>
       <div className="grid grid-cols-2 gap-2">
         <div className="text-xs space-y-1">
           {Object.entries(whitePieces).map(([type, count]) => count > 0 && (
@@ -95,6 +95,34 @@ const GameInfo: FC<GameInfoProps> = ({ gameState }) => {
               <span>×{count}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      <div className="mt-3 text-sm font-medium mb-2">Quân đã bắt (có thể thả):</div>
+      <div className="grid grid-cols-2 gap-2">
+        <div className="text-xs space-y-1">
+          {gameState.pieceBank[PieceColor.WHITE].length > 0 ? (
+            gameState.pieceBank[PieceColor.WHITE].map((piece, index) => (
+              <div key={`bank-white-${piece.type}-${index}`} className="flex items-center gap-1">
+                <span>{getPieceSymbol(piece.type, PieceColor.WHITE)}</span>
+                <span className="text-green-400">+</span>
+              </div>
+            ))
+          ) : (
+            <div className="italic text-gray-500">Chưa có quân</div>
+          )}
+        </div>
+        <div className="text-xs space-y-1">
+          {gameState.pieceBank[PieceColor.BLACK].length > 0 ? (
+            gameState.pieceBank[PieceColor.BLACK].map((piece, index) => (
+              <div key={`bank-black-${piece.type}-${index}`} className="flex items-center gap-1">
+                <span>{getPieceSymbol(piece.type, PieceColor.BLACK)}</span>
+                <span className="text-green-400">+</span>
+              </div>
+            ))
+          ) : (
+            <div className="italic text-gray-500">Chưa có quân</div>
+          )}
         </div>
       </div>
     </div>
