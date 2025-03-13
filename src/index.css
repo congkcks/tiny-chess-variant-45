@@ -1,4 +1,3 @@
-
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700;800;900&display=swap');
 
 @tailwind base;
@@ -105,7 +104,7 @@
 
 @layer components {
   .chess-piece {
-    @apply transition-all duration-200 ease-in-out cursor-pointer;
+    @apply w-full h-full transition-all duration-200 ease-in-out;
   }
 
   .chess-piece:hover {
@@ -123,6 +122,12 @@
   .chess-square.valid-move {
     @apply before:absolute before:w-3/5 before:h-3/5 before:rounded-full 
            before:bg-[rgba(0,255,0,0.2)] before:opacity-70 before:z-10;
+  }
+  
+  .chess-square.drop-target {
+    @apply before:absolute before:w-4/5 before:h-4/5 before:rounded-md
+           before:bg-[rgba(255,215,0,0.3)] before:opacity-80 before:z-10
+           before:border before:border-dashed before:border-yellow-400;
   }
 
   .chess-square.check {

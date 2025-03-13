@@ -31,6 +31,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
   const [validMoves, setValidMoves] = useState<Position[]>([]);
   const [promotionPosition, setPromotionPosition] = useState<Position | null>(null);
   const [isDroppingPiece, setIsDroppingPiece] = useState<ChessPieceType | null>(null);
+  const [dropHighlight, setDropHighlight] = useState<boolean>(false);
 
   // Handle board orientation based on perspective
   const boardRows = [...Array(6).keys()];
@@ -45,14 +46,26 @@ const ChessBoard: FC<ChessBoardProps> = ({
     // Reset selection when turn changes
     setSelectedPosition(null);
     setValidMoves([]);
+    setIsDroppingPiece(null);
   }, [gameState.currentPlayer]);
 
   // Handle selecting a piece from the piece bank
   const handlePieceBankSelect = (piece: ChessPieceType) => {
+    // Clear any previous selection
     setSelectedPosition(null);
+    // Set the dropping piece
     setIsDroppingPiece(piece);
+    // Show visual indication that we're in dropping mode
+    setDropHighlight(true);
+    // Get valid drop squares
     const validDropSquares = getValidDropSquares(gameState, piece);
     setValidMoves(validDropSquares);
+    
+    // Show toast with instructions
+    toast.info("Chọn ô để thả quân", {
+      duration: 3000,
+      position: "top-center",
+    });
   };
 
   // Handle click on a board square
@@ -62,18 +75,22 @@ const ChessBoard: FC<ChessBoardProps> = ({
     // If dropping a piece
     if (isDroppingPiece) {
       if (validMoves.some(move => move.row === position.row && move.col === position.col)) {
+        // Execute the drop
         const newState = dropPiece(gameState, isDroppingPiece, position);
         onMove(newState);
         
+        // Check game ending conditions
         if (newState.isCheckmate) {
-          const winner = currentPlayer === PieceColor.WHITE ? 'White' : 'Black';
-          toast.success(`Checkmate! ${winner} wins!`);
+          const winner = currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
+          toast.success(`Chiếu hết! ${winner} thắng!`);
         } else if (newState.isCheck) {
-          toast.warning('Check!');
+          toast.warning('Chiếu!');
         }
       }
+      // Reset dropping state
       setIsDroppingPiece(null);
       setValidMoves([]);
+      setDropHighlight(false);
       return;
     }
 
@@ -111,12 +128,12 @@ const ChessBoard: FC<ChessBoardProps> = ({
       
       // Check game ending conditions
       if (newState.isCheckmate) {
-        const winner = currentPlayer === PieceColor.WHITE ? 'White' : 'Black';
-        toast.success(`Checkmate! ${winner} wins!`);
+        const winner = currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
+        toast.success(`Chiếu hết! ${winner} thắng!`);
       } else if (newState.isStalemate) {
         toast.info('Stalemate! The game is a draw.');
       } else if (newState.isCheck) {
-        toast.warning('Check!');
+        toast.warning('Chiếu!');
       }
       
       setSelectedPosition(null);
@@ -146,10 +163,10 @@ const ChessBoard: FC<ChessBoardProps> = ({
     
     // Check game ending conditions after promotion
     if (newState.isCheckmate) {
-      const winner = gameState.currentPlayer === PieceColor.WHITE ? 'White' : 'Black';
-      toast.success(`Checkmate! ${winner} wins!`);
+      const winner = gameState.currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
+      toast.success(`Chiếu hết! ${winner} thắng!`);
     } else if (newState.isCheck) {
-      toast.warning('Check!');
+      toast.warning('Chiếu!');
     }
     
     setSelectedPosition(null);
@@ -202,7 +219,10 @@ const ChessBoard: FC<ChessBoardProps> = ({
         />
       )}
 
-      <div className="relative w-full max-w-md aspect-square rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 p-2">
+      <div className={cn(
+        "relative w-full max-w-md aspect-square rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 p-2",
+        dropHighlight && "ring-2 ring-yellow-400 ring-opacity-50"
+      )}>
         <div className="w-full h-full grid grid-cols-6 grid-rows-6 relative">
           {/* Board squares */}
           {boardRows.map(rowIndex => {
@@ -225,7 +245,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
                     isLightSquare(actualRow, actualCol) ? "bg-board-light" : "bg-board-dark",
                     isPartOfLastMove(actualRow, actualCol) && "last-move",
                     isSquareInCheck(actualRow, actualCol) && "check",
-                    isValidMoveSquare && "valid-move",
+                    isValidMoveSquare && (isDroppingPiece ? "drop-target" : "valid-move"),
                     selectedPosition?.row === actualRow && selectedPosition?.col === actualCol && "ring-2 ring-yellow-400"
                   )}
                   onClick={() => handleSquareClick(position)}
@@ -273,11 +293,26 @@ const ChessBoard: FC<ChessBoardProps> = ({
                           stiffness: 500,
                           damping: 30
                         }}
+                        className="w-full h-full p-1"
                       >
                         <ChessPiece 
                           piece={piece} 
                           isSelected={selectedPosition?.row === actualRow && selectedPosition?.col === actualCol}
                         />
+                      </motion.div>
+                    )}
+                    
+                    {/* Drop preview */}
+                    {isDroppingPiece && isValidMoveSquare && !piece && (
+                      <motion.div 
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 0.6 }}
+                        exit={{ opacity: 0 }}
+                        className="absolute inset-0 flex items-center justify-center p-1"
+                      >
+                        <div className="w-full h-full opacity-60">
+                          <ChessPiece piece={isDroppingPiece} />
+                        </div>
                       </motion.div>
                     )}
                   </AnimatePresence>
@@ -286,6 +321,13 @@ const ChessBoard: FC<ChessBoardProps> = ({
             });
           })}
         </div>
+        
+        {/* Drop indicator */}
+        {isDroppingPiece && (
+          <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+            Đang thả quân...
+          </div>
+        )}
       </div>
 
       {/* Black's piece bank (shown at top for white's perspective, bottom for black's) */}

@@ -42,30 +42,40 @@ const PieceBank: FC<PieceBankProps> = ({
       <h3 className="text-xs font-semibold mb-2 text-[#b8b0a2]">
         {color === PieceColor.WHITE ? "Quân đã bắt" : "Quân đã bắt"}
       </h3>
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-2">
         {Object.entries(groupedPieces).map(([type, pieces]) => (
           <div 
             key={type}
             className="relative"
           >
-            <button
+            <motion.button
               className={cn(
-                "relative group hover:scale-110 transition-transform",
-                isActive ? "cursor-pointer" : "cursor-not-allowed"
+                "relative group w-10 h-10 bg-[#8E9196]/20 rounded-md flex items-center justify-center",
+                isActive ? "cursor-pointer hover:bg-[#8E9196]/40" : "cursor-not-allowed opacity-50",
+                isActive && "hover:scale-110"
               )}
               onClick={() => isActive && onPieceSelect(pieces[0])}
               disabled={!isActive}
+              whileHover={isActive ? { scale: 1.1 } : {}}
+              transition={{ type: "spring", stiffness: 400, damping: 10 }}
             >
-              <ChessPiece piece={pieces[0]} />
+              <div className="w-8 h-8">
+                <ChessPiece piece={pieces[0]} />
+              </div>
               {pieces.length > 1 && (
-                <span className="absolute -top-1 -right-1 bg-[#769656] text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                <span className="absolute -top-2 -right-2 bg-[#769656] text-white text-xs rounded-full w-5 h-5 flex items-center justify-center shadow-md">
                   {pieces.length}
                 </span>
               )}
-            </button>
+            </motion.button>
           </div>
         ))}
       </div>
+      {Object.keys(groupedPieces).length === 0 && (
+        <div className="text-xs italic text-gray-400 mt-1 text-center">
+          Chưa có quân nào
+        </div>
+      )}
     </motion.div>
   );
 };
