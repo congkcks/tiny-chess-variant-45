@@ -1,3 +1,4 @@
+
 import { FC, useState, useEffect } from 'react';
 import ChessPiece from './ChessPiece';
 import PieceBank from './PieceBank';
@@ -51,6 +52,15 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
   // Handle selecting a piece from the piece bank
   const handlePieceBankSelect = (piece: ChessPieceType) => {
+    // Only allow current player to drop pieces
+    if (piece.color !== gameState.currentPlayer) {
+      toast.error("Chỉ có thể thả quân trong lượt của bạn!", {
+        duration: 3000,
+        position: "top-center",
+      });
+      return;
+    }
+    
     // Clear any previous selection
     setSelectedPosition(null);
     // Set the dropping piece
@@ -208,16 +218,26 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
   return (
     <div className="flex flex-col md:flex-row items-start gap-4">
-      {/* White's piece bank (shown at bottom for white's perspective, top for black's) */}
-      {perspective === PieceColor.BLACK && (
+      {/* Both players' piece banks displayed regardless of perspective */}
+      <div className="md:w-48 space-y-4">
+        {/* Display white's piece bank */}
         <PieceBank
           pieces={gameState.pieceBank[PieceColor.WHITE]}
           color={PieceColor.WHITE}
           onPieceSelect={handlePieceBankSelect}
           isActive={gameState.currentPlayer === PieceColor.WHITE}
-          className="md:w-48"
+          className="w-full"
         />
-      )}
+        
+        {/* Display black's piece bank */}
+        <PieceBank
+          pieces={gameState.pieceBank[PieceColor.BLACK]}
+          color={PieceColor.BLACK}
+          onPieceSelect={handlePieceBankSelect}
+          isActive={gameState.currentPlayer === PieceColor.BLACK}
+          className="w-full"
+        />
+      </div>
 
       <div className={cn(
         "relative w-full max-w-md aspect-square rounded-lg overflow-hidden shadow-2xl bg-gradient-to-br from-gray-800 to-gray-900 p-2",
@@ -329,17 +349,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
           </div>
         )}
       </div>
-
-      {/* Black's piece bank (shown at top for white's perspective, bottom for black's) */}
-      {perspective === PieceColor.WHITE && (
-        <PieceBank
-          pieces={gameState.pieceBank[PieceColor.BLACK]}
-          color={PieceColor.BLACK}
-          onPieceSelect={handlePieceBankSelect}
-          isActive={gameState.currentPlayer === PieceColor.BLACK}
-          className="md:w-48"
-        />
-      )}
       
       {/* Promotion selection UI */}
       {promotionPosition && (
