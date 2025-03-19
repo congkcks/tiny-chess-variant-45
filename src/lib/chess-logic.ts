@@ -340,6 +340,11 @@ export const isKingInCheck = (gameState: GameState): boolean => {
 export const checkIfCheckmate = (gameState: GameState): boolean => {
   const { currentPlayer, board } = gameState;
   
+  // First, check if the king is in check
+  if (!isKingInCheck(gameState)) {
+    return false;
+  }
+  
   // Iterate through all pieces of the current player
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
@@ -348,10 +353,20 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
         const position: Position = { row, col };
         const validMoves = getValidMoves(gameState, position);
         
-        // If there's any valid move that gets the king out of check, it's not checkmate
+        // Check if any move gets the king out of check
         for (const move of validMoves) {
-          const newState = makeMove(gameState, position, move);
-          if (!isKingInCheck(newState)) {
+          // Create a new game state with this move applied
+          const newGameState = makeMove({...gameState}, position, move);
+          
+          // Check if king is still in check after this move
+          // We need to check the previous player's king since makeMove switches the current player
+          const kingStillInCheck = isKingInCheck({
+            ...newGameState,
+            currentPlayer: currentPlayer // Override the current player
+          });
+          
+          if (!kingStillInCheck) {
+            // If any move gets out of check, it's not checkmate
             return false;
           }
         }
@@ -359,6 +374,31 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
     }
   }
   
+  // Check if there are any pieces in the piece bank that could help escape check
+  const pieceBank = gameState.pieceBank[currentPlayer];
+  if (pieceBank.length > 0) {
+    for (const piece of pieceBank) {
+      const validDropSquares = getValidDropSquares(gameState, piece);
+      
+      for (const dropPosition of validDropSquares) {
+        // Simulate dropping the piece
+        const tempGameState = dropPiece({...gameState}, piece, dropPosition);
+        
+        // Check if king is still in check after this drop
+        const kingStillInCheck = isKingInCheck({
+          ...tempGameState,
+          currentPlayer: currentPlayer // Override the current player since dropPiece switches it
+        });
+        
+        if (!kingStillInCheck) {
+          // If any drop gets out of check, it's not checkmate
+          return false;
+        }
+      }
+    }
+  }
+  
+  // If no moves or drops escape check, it's checkmate
   return true;
 };
 

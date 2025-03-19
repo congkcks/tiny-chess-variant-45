@@ -1,6 +1,6 @@
 
 import { FC } from 'react';
-import { Trophy, Crown } from 'lucide-react';
+import { Trophy, Crown, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PieceColor } from '@/lib/chess-models';
 import {
@@ -46,9 +46,14 @@ const CheckmateModal: FC<CheckmateModalProps> = ({ winner, onNewGame, open }) =>
           </AlertDialogHeader>
           
           <div className="flex justify-center my-6">
-            <div className={`w-24 h-24 rounded-full flex items-center justify-center ${winner === PieceColor.WHITE ? 'bg-white text-black' : 'bg-black text-white border border-white'}`}>
+            <motion.div 
+              className={`w-24 h-24 rounded-full flex items-center justify-center ${winner === PieceColor.WHITE ? 'bg-white text-black' : 'bg-black text-white border border-white'}`}
+              initial={{ rotate: 0 }}
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.5, ease: "easeInOut" }}
+            >
               <span className="text-5xl">♚</span>
-            </div>
+            </motion.div>
           </div>
           
           <AlertDialogFooter className="flex justify-center">

@@ -37,7 +37,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
   const [dropHighlight, setDropHighlight] = useState<boolean>(false);
   const [showCheckmateModal, setShowCheckmateModal] = useState<boolean>(false);
 
-  // Handle board orientation based on perspective
   const boardRows = [...Array(6).keys()];
   const boardCols = [...Array(6).keys()];
   
@@ -47,24 +46,28 @@ const ChessBoard: FC<ChessBoardProps> = ({
   }
 
   useEffect(() => {
-    // Reset selection when turn changes
     setSelectedPosition(null);
     setValidMoves([]);
     setIsDroppingPiece(null);
   }, [gameState.currentPlayer]);
 
-  // Show checkmate modal when checkmate occurs
   useEffect(() => {
     if (gameState.isCheckmate) {
+      const winner = gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+      const winnerText = winner === PieceColor.WHITE ? "Trắng" : "Đen";
+      
+      toast.error(`Chiếu hết! Người chơi quân ${winnerText} đã thắng!`, {
+        duration: 5000,
+        position: "top-center",
+      });
+      
       setShowCheckmateModal(true);
     } else {
       setShowCheckmateModal(false);
     }
-  }, [gameState.isCheckmate]);
+  }, [gameState.isCheckmate, gameState.currentPlayer]);
 
-  // Handle selecting a piece from the piece bank
   const handlePieceBankSelect = (piece: ChessPieceType) => {
-    // Only allow current player to drop pieces
     if (piece.color !== gameState.currentPlayer) {
       toast.error("Chỉ có thể thả quân trong lượt của bạn!", {
         duration: 3000,
@@ -73,35 +76,26 @@ const ChessBoard: FC<ChessBoardProps> = ({
       return;
     }
     
-    // Clear any previous selection
     setSelectedPosition(null);
-    // Set the dropping piece
     setIsDroppingPiece(piece);
-    // Show visual indication that we're in dropping mode
     setDropHighlight(true);
-    // Get valid drop squares
     const validDropSquares = getValidDropSquares(gameState, piece);
     setValidMoves(validDropSquares);
     
-    // Show toast with instructions
     toast.info("Chọn ô để thả quân", {
       duration: 3000,
       position: "top-center",
     });
   };
 
-  // Handle click on a board square
   const handleSquareClick = (position: Position) => {
     const { board, currentPlayer } = gameState;
 
-    // If dropping a piece
     if (isDroppingPiece) {
       if (validMoves.some(move => move.row === position.row && move.col === position.col)) {
-        // Execute the drop
         const newState = dropPiece(gameState, isDroppingPiece, position);
         onMove(newState);
         
-        // Check game ending conditions
         if (newState.isCheckmate) {
           const winner = currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
           toast.success(`Chiếu hết! ${winner} thắng!`);
@@ -109,7 +103,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
           toast.warning('Chiếu!');
         }
       }
-      // Reset dropping state
       setIsDroppingPiece(null);
       setValidMoves([]);
       setDropHighlight(false);
@@ -118,10 +111,8 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
     const piece = board[position.row][position.col];
 
-    // If we're waiting for promotion selection, ignore other clicks
     if (promotionPosition) return;
 
-    // If clicked on an already selected piece, deselect it
     if (selectedPosition && 
         selectedPosition.row === position.row && 
         selectedPosition.col === position.col) {
@@ -130,25 +121,20 @@ const ChessBoard: FC<ChessBoardProps> = ({
       return;
     }
 
-    // If clicked on a valid move square, move the selected piece there
     if (selectedPosition && validMoves.some(move => move.row === position.row && move.col === position.col)) {
       const movingPiece = board[selectedPosition.row][selectedPosition.col];
       
-      // Check if this is a pawn promotion move
       if (movingPiece && 
           movingPiece.type === PieceType.PAWN &&
           ((movingPiece.color === PieceColor.WHITE && position.row === 5) ||
            (movingPiece.color === PieceColor.BLACK && position.row === 0))) {
-        // If it's a promotion, store the destination and show promotion options
         setPromotionPosition(position);
         return;
       }
       
-      // Execute the move
       const newState = makeMove(gameState, selectedPosition, position);
       onMove(newState);
       
-      // Check game ending conditions
       if (newState.isCheckmate) {
         const winner = currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
         toast.success(`Chiếu hết! ${winner} thắng!`);
@@ -163,7 +149,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
       return;
     }
 
-    // If clicked on own piece, select it and show valid moves
     if (piece && piece.color === currentPlayer) {
       setSelectedPosition(position);
       const moves = getValidMoves(gameState, position);
@@ -171,19 +156,16 @@ const ChessBoard: FC<ChessBoardProps> = ({
       return;
     }
 
-    // If clicked on empty square or opponent's piece without having a piece selected
     setSelectedPosition(null);
     setValidMoves([]);
   };
 
-  // Handle promotion selection
   const handlePromotion = (promoteTo: PieceType) => {
     if (!selectedPosition || !promotionPosition) return;
     
     const newState = makeMove(gameState, selectedPosition, promotionPosition, promoteTo);
     onMove(newState);
     
-    // Check game ending conditions after promotion
     if (newState.isCheckmate) {
       const winner = gameState.currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
       toast.success(`Chiếu hết! ${winner} thắng!`);
@@ -196,25 +178,26 @@ const ChessBoard: FC<ChessBoardProps> = ({
     setPromotionPosition(null);
   };
 
-  // Handle new game from the checkmate modal
   const handleNewGame = () => {
     if (onNewGame) {
       onNewGame();
       setShowCheckmateModal(false);
+      
+      toast.success("Trò chơi mới đã bắt đầu!", {
+        duration: 3000,
+        position: "top-center",
+      });
     }
   };
 
-  // Determine if a square is a "light" or "dark" square
   const isLightSquare = (row: number, col: number) => (row + col) % 2 === 0;
 
-  // Get algebraic notation for a square (e.g., "a1", "e5")
   const getSquareNotation = (row: number, col: number) => {
-    const file = String.fromCharCode(97 + col); // 'a' through 'f'
-    const rank = row + 1; // 1 through 6
+    const file = String.fromCharCode(97 + col);
+    const rank = row + 1;
     return `${file}${rank}`;
   };
 
-  // Check if a square is part of the last move
   const isPartOfLastMove = (row: number, col: number) => {
     const { lastMove } = gameState;
     if (!lastMove) return false;
@@ -225,7 +208,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
     );
   };
 
-  // Check if a square is in check
   const isSquareInCheck = (row: number, col: number) => {
     const { board, isCheck } = gameState;
     const piece = board[row][col];
@@ -238,9 +220,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
   return (
     <div className="flex flex-col md:flex-row items-start gap-4">
-      {/* Both players' piece banks displayed regardless of perspective */}
       <div className="md:w-48 space-y-4">
-        {/* Display white's piece bank */}
         <PieceBank
           pieces={gameState.pieceBank[PieceColor.WHITE]}
           color={PieceColor.WHITE}
@@ -248,8 +228,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
           isActive={gameState.currentPlayer === PieceColor.WHITE}
           className="w-full"
         />
-        
-        {/* Display black's piece bank */}
         <PieceBank
           pieces={gameState.pieceBank[PieceColor.BLACK]}
           color={PieceColor.BLACK}
@@ -264,13 +242,10 @@ const ChessBoard: FC<ChessBoardProps> = ({
         dropHighlight && "ring-2 ring-yellow-400 ring-opacity-50"
       )}>
         <div className="w-full h-full grid grid-cols-6 grid-rows-6 relative">
-          {/* Board squares */}
           {boardRows.map(rowIndex => {
-            // Get actual row index based on perspective
             const actualRow = perspective === PieceColor.WHITE ? 5 - rowIndex : rowIndex;
             
             return boardCols.map(colIndex => {
-              // Get actual column index based on perspective
               const actualCol = perspective === PieceColor.WHITE ? colIndex : 5 - colIndex;
               
               const position = { row: actualRow, col: actualCol };
@@ -290,7 +265,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
                   )}
                   onClick={() => handleSquareClick(position)}
                 >
-                  {/* Coordinate labels */}
                   {showCoordinates && (
                     <>
                       {actualCol === 0 && perspective === PieceColor.WHITE && (
@@ -316,7 +290,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
                     </>
                   )}
                   
-                  {/* Chess piece */}
                   <AnimatePresence mode="wait">
                     {piece && (
                       <motion.div
@@ -342,7 +315,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
                       </motion.div>
                     )}
                     
-                    {/* Drop preview */}
                     {isDroppingPiece && isValidMoveSquare && !piece && (
                       <motion.div 
                         initial={{ opacity: 0 }}
@@ -362,7 +334,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
           })}
         </div>
         
-        {/* Drop indicator */}
         {isDroppingPiece && (
           <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
             Đang thả quân...
@@ -370,7 +341,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
         )}
       </div>
       
-      {/* Promotion selection UI */}
       {promotionPosition && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
           <motion.div 
@@ -404,7 +374,6 @@ const ChessBoard: FC<ChessBoardProps> = ({
         </div>
       )}
 
-      {/* Checkmate Modal */}
       <CheckmateModal 
         winner={gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE}
         onNewGame={handleNewGame}
