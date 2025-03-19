@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import ChessBoard from '@/components/ChessBoard';
 import MoveHistory from '@/components/MoveHistory';
@@ -83,6 +84,7 @@ const Index = () => {
               gameState={gameState} 
               onMove={handleMove} 
               perspective={boardPerspective}
+              onNewGame={handleNewGame}
             />
           </motion.div>
           

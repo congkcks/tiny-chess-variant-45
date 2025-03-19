@@ -1,7 +1,7 @@
-
 import { FC, useState, useEffect } from 'react';
 import ChessPiece from './ChessPiece';
 import PieceBank from './PieceBank';
+import CheckmateModal from './CheckmateModal';
 import { 
   ChessPiece as ChessPieceType, 
   GameState, 
@@ -20,19 +20,22 @@ interface ChessBoardProps {
   onMove: (newState: GameState) => void;
   perspective?: PieceColor;
   showCoordinates?: boolean;
+  onNewGame?: () => void;
 }
 
 const ChessBoard: FC<ChessBoardProps> = ({ 
   gameState, 
   onMove, 
   perspective = PieceColor.WHITE,
-  showCoordinates = true
+  showCoordinates = true,
+  onNewGame
 }) => {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [validMoves, setValidMoves] = useState<Position[]>([]);
   const [promotionPosition, setPromotionPosition] = useState<Position | null>(null);
   const [isDroppingPiece, setIsDroppingPiece] = useState<ChessPieceType | null>(null);
   const [dropHighlight, setDropHighlight] = useState<boolean>(false);
+  const [showCheckmateModal, setShowCheckmateModal] = useState<boolean>(false);
 
   // Handle board orientation based on perspective
   const boardRows = [...Array(6).keys()];
@@ -49,6 +52,15 @@ const ChessBoard: FC<ChessBoardProps> = ({
     setValidMoves([]);
     setIsDroppingPiece(null);
   }, [gameState.currentPlayer]);
+
+  // Show checkmate modal when checkmate occurs
+  useEffect(() => {
+    if (gameState.isCheckmate) {
+      setShowCheckmateModal(true);
+    } else {
+      setShowCheckmateModal(false);
+    }
+  }, [gameState.isCheckmate]);
 
   // Handle selecting a piece from the piece bank
   const handlePieceBankSelect = (piece: ChessPieceType) => {
@@ -182,6 +194,14 @@ const ChessBoard: FC<ChessBoardProps> = ({
     setSelectedPosition(null);
     setValidMoves([]);
     setPromotionPosition(null);
+  };
+
+  // Handle new game from the checkmate modal
+  const handleNewGame = () => {
+    if (onNewGame) {
+      onNewGame();
+      setShowCheckmateModal(false);
+    }
   };
 
   // Determine if a square is a "light" or "dark" square
@@ -383,6 +403,13 @@ const ChessBoard: FC<ChessBoardProps> = ({
           </motion.div>
         </div>
       )}
+
+      {/* Checkmate Modal */}
+      <CheckmateModal 
+        winner={gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE}
+        onNewGame={handleNewGame}
+        open={showCheckmateModal}
+      />
     </div>
   );
 };
