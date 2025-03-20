@@ -1,4 +1,3 @@
-
 import { FC, useState, useEffect } from 'react';
 import ChessPiece from './ChessPiece';
 import PieceBank from './PieceBank';
@@ -296,12 +295,12 @@ const ChessBoard: FC<ChessBoardProps> = ({
                   <AnimatePresence mode="wait">
                     {piece && (
                       <motion.div
-                        key={`piece-${piece.id}`}
+                        key={`piece-${piece.id}-${actualRow}-${actualCol}`}
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ 
                           scale: 1, 
                           opacity: 1,
-                          y: isValidMoveSquare ? [0, -5, 0] : 0
+                          y: isValidMoveSquare ? [0, -5, 0].length > 2 ? 0 : [0, -5] : 0
                         }}
                         exit={{ scale: 0.8, opacity: 0 }}
                         transition={{
