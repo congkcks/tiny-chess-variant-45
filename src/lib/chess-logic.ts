@@ -140,10 +140,43 @@ const getValidKnightMoves = (gameState: GameState, position: Position): Position
   return validMoves;
 };
 
+// Get valid moves for a bishop
+const getValidBishopMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const { row, col } = position;
+  const validMoves: Position[] = [];
+  
+  const directions = [
+    { row: 1, col: 1 },   // Down-right
+    { row: 1, col: -1 },  // Down-left
+    { row: -1, col: 1 },  // Up-right
+    { row: -1, col: -1 }  // Up-left
+  ];
+  
+  directions.forEach(dir => {
+    for (let i = 1; i < 6; i++) {
+      const newPos: Position = { row: row + i * dir.row, col: col + i * dir.col };
+      if (!isValidPosition(newPos)) break;
+      
+      const targetPiece = board[newPos.row][newPos.col];
+      if (!targetPiece) {
+        validMoves.push(newPos);
+      } else {
+        if (targetPiece.color !== currentPlayer) {
+          validMoves.push(newPos);
+        }
+        break;
+      }
+    }
+  });
+  
+  return validMoves;
+};
+
 // Get valid moves for a queen
 const getValidQueenMoves = (gameState: GameState, position: Position): Position[] => {
   const rookMoves = getValidRookMoves(gameState, position);
-  const bishopMoves: Position[] = getValidBishopMoves(gameState, position); // Ensure this function exists
+  const bishopMoves = getValidBishopMoves(gameState, position);
   
   return [...rookMoves, ...bishopMoves];
 };
