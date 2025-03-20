@@ -1,3 +1,4 @@
+
 import { 
   ChessPiece, 
   GameState, 
@@ -272,11 +273,14 @@ export const makeMove = (
     promoteTo: promoteTo,
   };
   
+  // Switch the current player
+  const nextPlayer = currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  
   // Update game state
   const newGameState: GameState = {
     ...gameState,
     board: newBoard,
-    currentPlayer: currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
+    currentPlayer: nextPlayer,
     moveHistory: [...gameState.moveHistory, move],
     selectedPiece: null,
     validMoves: [],
@@ -284,14 +288,15 @@ export const makeMove = (
     lastMove: move,
   };
   
-  // Check if the move results in a check
+  // We need to check if the OPPONENT is in check after the move
   const isCheck = isKingInCheck(newGameState);
   newGameState.isCheck = isCheck;
   
-  // Check if the move results in a checkmate or stalemate
+  // Check if the OPPONENT is in checkmate
   const isCheckmate = isCheck && checkIfCheckmate(newGameState);
   newGameState.isCheckmate = isCheckmate;
 
+  // Check if the OPPONENT is in stalemate
   const isStalemate = !isCheck && checkIfStalemate(newGameState);
   newGameState.isStalemate = isStalemate;
   
@@ -304,6 +309,8 @@ export const isKingInCheck = (gameState: GameState): boolean => {
   
   // Find the king's position
   let kingPosition: Position | null = null;
+  
+  // Look for the current player's king
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
@@ -321,11 +328,16 @@ export const isKingInCheck = (gameState: GameState): boolean => {
   }
   
   // Check if any opponent's piece can attack the king
+  const opponentColor = currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
-      if (piece && piece.color !== currentPlayer) {
-        const validMoves = getValidMoves({ ...gameState, currentPlayer: piece.color }, { row, col });
+      if (piece && piece.color === opponentColor) {
+        // Get valid moves for the opponent's piece
+        const validMoves = getValidMoves({ ...gameState, currentPlayer: opponentColor }, { row, col });
+        
+        // Check if any valid move includes the king's position
         if (validMoves.some(move => move.row === kingPosition!.row && move.col === kingPosition!.col)) {
           return true;
         }
@@ -353,15 +365,15 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
         const position: Position = { row, col };
         const validMoves = getValidMoves(gameState, position);
         
-        // Check if any move gets the king out of check
+        // For each valid move, simulate the move and check if it gets out of check
         for (const move of validMoves) {
           // Create a new game state with this move applied
-          const newGameState = makeMove({...gameState}, position, move);
+          const tempGameState = makeMove({...gameState}, position, move);
           
           // Check if king is still in check after this move
-          // We need to check the previous player's king since makeMove switches the current player
+          // We need to check the current player's king since makeMove switches the current player
           const kingStillInCheck = isKingInCheck({
-            ...newGameState,
+            ...tempGameState,
             currentPlayer: currentPlayer // Override the current player
           });
           
@@ -493,16 +505,29 @@ export const dropPiece = (gameState: GameState, piece: ChessPiece, position: Pos
     isDropped: true,
   };
   
+  // Switch the current player
+  const nextPlayer = currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  
   // Update game state
-  return {
+  const newState = {
     ...newGameState,
     board: newBoard,
     pieceBank: newPieceBank,
-    currentPlayer: currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE,
+    currentPlayer: nextPlayer,
     moveHistory: [...newGameState.moveHistory, move],
     selectedPiece: null,
     validMoves: [],
     lastMove: move,
     isDroppingPiece: false,
   };
+  
+  // Check if the opponent is now in check or checkmate
+  const isCheck = isKingInCheck(newState);
+  newState.isCheck = isCheck;
+  
+  // Check for checkmate
+  const isCheckmate = isCheck && checkIfCheckmate(newState);
+  newState.isCheckmate = isCheckmate;
+  
+  return newState;
 };

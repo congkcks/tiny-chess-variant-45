@@ -1,3 +1,4 @@
+
 import { FC, useState, useEffect } from 'react';
 import ChessPiece from './ChessPiece';
 import PieceBank from './PieceBank';
@@ -97,8 +98,9 @@ const ChessBoard: FC<ChessBoardProps> = ({
         onMove(newState);
         
         if (newState.isCheckmate) {
-          const winner = currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
-          toast.success(`Chiếu hết! ${winner} thắng!`);
+          const winner = currentPlayer;
+          const winnerText = winner === PieceColor.WHITE ? "Trắng" : "Đen";
+          toast.success(`Chiếu hết! ${winnerText} thắng!`);
         } else if (newState.isCheck) {
           toast.warning('Chiếu!');
         }
@@ -136,8 +138,9 @@ const ChessBoard: FC<ChessBoardProps> = ({
       onMove(newState);
       
       if (newState.isCheckmate) {
-        const winner = currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
-        toast.success(`Chiếu hết! ${winner} thắng!`);
+        const winner = currentPlayer;
+        const winnerText = winner === PieceColor.WHITE ? "Trắng" : "Đen";
+        toast.success(`Chiếu hết! ${winnerText} thắng!`);
       } else if (newState.isStalemate) {
         toast.info('Stalemate! The game is a draw.');
       } else if (newState.isCheck) {
@@ -376,7 +379,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
       <CheckmateModal 
         winner={gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE}
-        onNewGame={handleNewGame}
+        onNewGame={handleNewGame || (() => {})}
         open={showCheckmateModal}
       />
     </div>
