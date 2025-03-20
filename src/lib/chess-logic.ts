@@ -1,4 +1,3 @@
-
 import { 
   ChessPiece, 
   GameState, 
@@ -348,7 +347,7 @@ export const isKingInCheck = (gameState: GameState): boolean => {
   return false;
 };
 
-// Check if the current player is in checkmate
+// Improved checkmate detection
 export const checkIfCheckmate = (gameState: GameState): boolean => {
   const { currentPlayer, board } = gameState;
   
@@ -357,11 +356,48 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
     return false;
   }
   
-  // Iterate through all pieces of the current player
+  // Find the king's position
+  let kingPosition: Position | null = null;
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
-      if (piece && piece.color === currentPlayer) {
+      if (piece?.type === PieceType.KING && piece?.color === currentPlayer) {
+        kingPosition = { row, col };
+        break;
+      }
+    }
+    if (kingPosition) break;
+  }
+  
+  if (!kingPosition) {
+    console.error('King not found in checkmate detection');
+    return false;
+  }
+  
+  // 1. Check if the king can move to escape check
+  const kingValidMoves = getValidMoves(gameState, kingPosition);
+  for (const move of kingValidMoves) {
+    // Create a new game state with this move applied
+    const tempGameState = makeMove({...gameState}, kingPosition, move);
+    
+    // Check if king is still in check after this move
+    // We need to check the current player's king since makeMove switches the current player
+    const kingStillInCheck = isKingInCheck({
+      ...tempGameState,
+      currentPlayer: currentPlayer // Override the current player
+    });
+    
+    if (!kingStillInCheck) {
+      // If any move gets out of check, it's not checkmate
+      return false;
+    }
+  }
+  
+  // 2. Check if any other piece can block the check or capture the attacking piece
+  for (let row = 0; row < 6; row++) {
+    for (let col = 0; col < 6; col++) {
+      const piece = board[row][col];
+      if (piece && piece.color === currentPlayer && piece.type !== PieceType.KING) {
         const position: Position = { row, col };
         const validMoves = getValidMoves(gameState, position);
         
@@ -371,7 +407,6 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
           const tempGameState = makeMove({...gameState}, position, move);
           
           // Check if king is still in check after this move
-          // We need to check the current player's king since makeMove switches the current player
           const kingStillInCheck = isKingInCheck({
             ...tempGameState,
             currentPlayer: currentPlayer // Override the current player
@@ -386,7 +421,7 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
     }
   }
   
-  // Check if there are any pieces in the piece bank that could help escape check
+  // 3. Check if there are any pieces in the piece bank that could help escape check
   const pieceBank = gameState.pieceBank[currentPlayer];
   if (pieceBank.length > 0) {
     for (const piece of pieceBank) {
@@ -411,6 +446,7 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
   }
   
   // If no moves or drops escape check, it's checkmate
+  console.log("CHECKMATE DETECTED for player:", currentPlayer);
   return true;
 };
 
