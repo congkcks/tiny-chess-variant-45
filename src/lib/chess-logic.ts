@@ -170,7 +170,14 @@ const getValidKingMoves = (gameState: GameState, position: Position): Position[]
     if (isValidPosition(newPos)) {
       const targetPiece = board[newPos.row][newPos.col];
       if (!targetPiece || targetPiece.color !== currentPlayer) {
-        validMoves.push(newPos);
+        // Before adding as valid move, check if this would put the king in check
+        const tempBoard = board.map(r => [...r]);
+        tempBoard[newPos.row][newPos.col] = { ...board[row][col] };
+        tempBoard[row][col] = null;
+        
+        if (!wouldBeInCheck(gameState, newPos, currentPlayer, tempBoard)) {
+          validMoves.push(newPos);
+        }
       }
     }
   });
@@ -178,37 +185,93 @@ const getValidKingMoves = (gameState: GameState, position: Position): Position[]
   return validMoves;
 };
 
-// Get valid moves for a bishop
-const getValidBishopMoves = (gameState: GameState, position: Position): Position[] => {
-    const { board, currentPlayer } = gameState;
-    const { row, col } = position;
-    const validMoves: Position[] = [];
-
-    const directions = [
-        { row: 1, col: 1 },  // Down-Right
-        { row: 1, col: -1 }, // Down-Left
-        { row: -1, col: 1 }, // Up-Right
-        { row: -1, col: -1 }  // Up-Left
-    ];
-
-    directions.forEach(dir => {
-        for (let i = 1; i < 6; i++) {
-            const newPos: Position = { row: row + i * dir.row, col: col + i * dir.col };
-            if (!isValidPosition(newPos)) break;
-
-            const targetPiece = board[newPos.row][newPos.col];
-            if (!targetPiece) {
-                validMoves.push(newPos);
-            } else {
-                if (targetPiece.color !== currentPlayer) {
-                    validMoves.push(newPos);
-                }
-                break;
-            }
+// Helper function to check if a king would be in check at a position
+const wouldBeInCheck = (
+  gameState: GameState, 
+  kingPosition: Position, 
+  kingColor: PieceColor,
+  testBoard: (ChessPiece | null)[][]
+): boolean => {
+  const opponentColor = kingColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  
+  // Check if any opponent piece can attack this position
+  for (let r = 0; r < 6; r++) {
+    for (let c = 0; c < 6; c++) {
+      const piece = testBoard[r][c];
+      if (piece && piece.color === opponentColor) {
+        const attackingPosition: Position = { row: r, col: c };
+        
+        // For all pieces except the king, use normal move generation
+        // but with our test board
+        const testGameState = { ...gameState, board: testBoard, currentPlayer: opponentColor };
+        const moves = getBasicValidMoves(testGameState, attackingPosition);
+        
+        if (moves.some(move => move.row === kingPosition.row && move.col === kingPosition.col)) {
+          return true;
         }
-    });
+      }
+    }
+  }
+  
+  return false;
+};
 
-    return validMoves;
+// Get basic valid moves without king check validation to avoid circular reference
+const getBasicValidMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const piece = board[position.row][position.col];
+  
+  if (!piece || piece.color !== currentPlayer) {
+    return [];
+  }
+  
+  switch (piece.type) {
+    case PieceType.PAWN:
+      return getValidPawnMoves(gameState, position);
+    case PieceType.ROOK:
+      return getValidRookMoves(gameState, position);
+    case PieceType.KNIGHT:
+      return getValidKnightMoves(gameState, position);
+    case PieceType.BISHOP:
+      return getValidBishopMoves(gameState, position);
+    case PieceType.QUEEN:
+      return getValidQueenMoves(gameState, position);
+    case PieceType.KING:
+      // For the king, use basic moves without check validation to avoid circular reference
+      return getBasicKingMoves(gameState, position);
+    default:
+      return [];
+  }
+};
+
+// Basic king moves without check validation
+const getBasicKingMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const { row, col } = position;
+  const validMoves: Position[] = [];
+  
+  const kingMoves = [
+    { row: 1, col: 0 },
+    { row: -1, col: 0 },
+    { row: 0, col: 1 },
+    { row: 0, col: -1 },
+    { row: 1, col: 1 },
+    { row: 1, col: -1 },
+    { row: -1, col: 1 },
+    { row: -1, col: -1 }
+  ];
+  
+  kingMoves.forEach(move => {
+    const newPos: Position = { row: row + move.row, col: col + move.col };
+    if (isValidPosition(newPos)) {
+      const targetPiece = board[newPos.row][newPos.col];
+      if (!targetPiece || targetPiece.color !== currentPlayer) {
+        validMoves.push(newPos);
+      }
+    }
+  });
+  
+  return validMoves;
 };
 
 // Make a move
