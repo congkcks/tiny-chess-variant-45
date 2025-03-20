@@ -296,7 +296,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
                   <AnimatePresence mode="wait">
                     {piece && (
                       <motion.div
-                        key={piece.id}
+                        key={`piece-${piece.id}`}
                         initial={{ scale: 0.8, opacity: 0 }}
                         animate={{ 
                           scale: 1, 
