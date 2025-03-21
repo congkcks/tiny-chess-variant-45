@@ -14,49 +14,129 @@ import {
     checkIfCheckmate
 } from '@/lib/chess-logic';
 
-// Điểm số của các loại quân (phù hợp với bàn cờ 6x6)
-const PIECE_SCORES: Record<PieceType, number> = {
-    [PieceType.KING]: 0,    // Không thể để mất
-    [PieceType.QUEEN]: 9,   // Quân quan trọng nhất
-    [PieceType.ROOK]: 5,
-    [PieceType.BISHOP]: 3,
-    [PieceType.KNIGHT]: 3,
-    [PieceType.PAWN]: 1     // Quân ít giá trị nhất
+// Điểm số chi tiết và chiến lược cho từng loại quân
+const PIECE_VALUES: Record<PieceType, number> = {
+    [PieceType.KING]: 200,      // Giá trị cao để bảo vệ
+    [PieceType.QUEEN]: 9,        // Quân mạnh nhất
+    [PieceType.ROOK]: 5,         // Quân chủ chốt
+    [PieceType.BISHOP]: 3,       // Quân chéo
+    [PieceType.KNIGHT]: 3,       // Quân nhảy
+    [PieceType.PAWN]: 1          // Quân yếu nhất
 };
 
-// Điểm vị trí cho quân Mã
-const KNIGHT_SCORES = [
-    [0.0, 0.1, 0.2, 0.2, 0.2, 0.2],
-    [0.1, 0.3, 0.5, 0.5, 0.5, 0.5],
-    [0.2, 0.5, 0.6, 0.65, 0.65, 0.6],
-    [0.2, 0.55, 0.65, 0.7, 0.7, 0.65],
-    [0.2, 0.5, 0.65, 0.7, 0.7, 0.65],
-    [0.0, 0.1, 0.2, 0.2, 0.2, 0.2]
-];
+// Ma trận điểm vị trí (Piece-Square Tables)
+const PIECE_SQUARE_TABLES: Record<PieceType, number[][]> = {
+    [PieceType.KING]: [
+        [-30, -40, -40, -50, -50, -40, -40, -30],
+        [-30, -40, -40, -50, -50, -40, -40, -30],
+        [-20, -30, -30, -40, -40, -30, -30, -20],
+        [-10, -20, -20, -20, -20, -20, -20, -10],
+        [20, 10, 0, 0, 0, 0, 10, 20],
+        [20, 30, 10, 0, 0, 10, 30, 20],
+        [30, 40, 20, 0, 0, 20, 40, 30],
+        [30, 40, 40, 50, 50, 40, 40, 30]
+    ].slice(0, 6).map(row => row.slice(0, 6)),
 
-// Điểm vị trí cho quân Tượng
-const BISHOP_SCORES = [
-    [0.0, 0.2, 0.2, 0.2, 0.2, 0.2],
-    [0.2, 0.4, 0.4, 0.4, 0.4, 0.4],
-    [0.2, 0.4, 0.5, 0.6, 0.6, 0.5],
-    [0.2, 0.5, 0.5, 0.6, 0.6, 0.5],
-    [0.2, 0.4, 0.6, 0.6, 0.6, 0.6],
-    [0.0, 0.2, 0.2, 0.2, 0.2, 0.2]
-];
+    [PieceType.QUEEN]: [
+        [-20, -10, -10, -5, -5, -10, -10, -20],
+        [-10, 0, 0, 0, 0, 0, 0, -10],
+        [-10, 0, 5, 5, 5, 5, 0, -10],
+        [-5, 0, 5, 5, 5, 5, 0, -5],
+        [0, 0, 5, 5, 5, 5, 0, -5],
+        [-10, 5, 5, 5, 5, 5, 0, -10],
+        [-10, 0, 5, 0, 0, 0, 0, -10],
+        [-20, -10, -10, -5, -5, -10, -10, -20]
+    ].slice(0, 6).map(row => row.slice(0, 6)),
 
+    [PieceType.ROOK]: [
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [5, 10, 10, 10, 10, 10, 10, 5],
+        [-5, 0, 0, 0, 0, 0, 0, -5],
+        [-5, 0, 0, 0, 0, 0, 0, -5],
+        [-5, 0, 0, 0, 0, 0, 0, -5],
+        [-5, 0, 0, 0, 0, 0, 0, -5]
+    ].slice(0, 6).map(row => row.slice(0, 6)),
+
+    [PieceType.BISHOP]: [
+        [-20, -10, -10, -10, -10, -10, -10, -20],
+        [-10, 0, 0, 0, 0, 0, 0, -10],
+        [-10, 0, 5, 10, 10, 5, 0, -10],
+        [-10, 5, 5, 10, 10, 5, 5, -10],
+        [-10, 0, 10, 10, 10, 10, 0, -10],
+        [-10, 10, 10, 10, 10, 10, 10, -10],
+        [-10, 5, 0, 0, 0, 0, 5, -10],
+        [-20, -10, -10, -10, -10, -10, -10, -20]
+    ].slice(0, 6).map(row => row.slice(0, 6)),
+
+    [PieceType.KNIGHT]: [
+        [-50, -40, -30, -30, -30, -30, -40, -50],
+        [-40, -20, 0, 0, 0, 0, -20, -40],
+        [-30, 0, 10, 15, 15, 10, 0, -30],
+        [-30, 5, 15, 20, 20, 15, 5, -30],
+        [-30, 0, 15, 20, 20, 15, 0, -30],
+        [-30, 5, 10, 15, 15, 10, 5, -30],
+        [-40, -20, 0, 5, 5, 0, -20, -40],
+        [-50, -40, -30, -30, -30, -30, -40, -50]
+    ].slice(0, 6).map(row => row.slice(0, 6)),
+
+    [PieceType.PAWN]: [
+        [0, 0, 0, 0, 0, 0, 0, 0],
+        [50, 50, 50, 50, 50, 50, 50, 50],
+        [10, 10, 20, 30, 30, 20, 10, 10],
+        [5, 5, 10, 25, 25, 10, 5, 5],
+        [0, 0, 0, 20, 20, 0, 0, 0],
+        [5, -5, -10, 0, 0, -10, -5, 5],
+        [5, 10, 10, -20, -20, 10, 10, 5],
+        [0, 0, 0, 0, 0, 0, 0, 0]
+    ].slice(0, 6).map(row => row.slice(0, 6))
+};
+
+// Hệ số trọng số cho các yếu tố chiến lược
+const STRATEGIC_WEIGHTS = {
+    PIECE_VALUE: 1.0,
+    PIECE_POSITION: 0.5,
+    MOBILITY: 0.3,
+    CENTER_CONTROL: 0.2,
+    KING_SAFETY: 0.4,
+    PIECE_DEVELOPMENT: 0.2
+};
+
+// Hằng số điểm
 const CHECKMATE_SCORE = 10000;
 const STALEMATE_SCORE = 0;
-const DEFAULT_DEPTH = 3;
+const DEFAULT_DEPTH = 2;
 
 interface AIMove {
     from?: Position;
     to: Position;
     piece?: ChessPiece;
     score: number;
+    capturedPiece?: ChessPiece;
 }
 
 export class ChessAI {
+    // Bảng tra cứu Transposition Table
+    private transpositionTable: Map<string, { depth: number, score: number, type: 'exact' | 'upperbound' | 'lowerbound' }> = new Map();
+
+    // Hàm băm trạng thái bàn cờ
+    private hashGameState(gameState: GameState): string {
+        const boardHash = gameState.board.map(row =>
+            row.map(piece => piece ?
+                `${piece.color}${piece.type}${piece.id}` : 'null'
+            ).join('|')
+        ).join('||');
+
+        const pieceBankHash =
+            gameState.pieceBank[PieceColor.WHITE].map(p => `W${p.type}`).join('|') +
+            '||' +
+            gameState.pieceBank[PieceColor.BLACK].map(p => `B${p.type}`).join('|');
+
+        return `${boardHash}|${pieceBankHash}|${gameState.currentPlayer}`;
+    }
+
+    // Đánh giá bảng cải tiến
     private evaluateBoard(gameState: GameState): number {
+        // Kiểm tra trạng thái kết thúc game
         if (gameState.isCheckmate) {
             return gameState.currentPlayer === PieceColor.WHITE
                 ? -CHECKMATE_SCORE
@@ -70,60 +150,161 @@ export class ChessAI {
         let score = 0;
         const board = gameState.board;
 
+        // Đánh giá chi tiết từng quân
         for (let row = 0; row < 6; row++) {
             for (let col = 0; col < 6; col++) {
                 const piece = board[row][col];
                 if (piece) {
-                    // Điểm số của quân cờ
-                    const pieceScore = PIECE_SCORES[piece.type];
+                    const multiplier = piece.color === PieceColor.WHITE ? 1 : -1;
 
-                    // Điểm vị trí của quân cờ
-                    let positionScore = 0;
-                    const key = `${piece.color === PieceColor.WHITE ? 'w' : 'b'}${piece.type.charAt(0).toUpperCase()}`;
+                    // Giá trị quân cơ bản
+                    let pieceScore = PIECE_VALUES[piece.type];
 
-                    switch (piece.type) {
-                        case PieceType.KNIGHT:
-                            positionScore = KNIGHT_SCORES[row][col];
-                            break;
-                        case PieceType.BISHOP:
-                            positionScore = BISHOP_SCORES[row][col];
-                            break;
-                    }
+                    // Điểm vị trí từ bảng điểm
+                    const positionScore = PIECE_SQUARE_TABLES[piece.type][row][col];
 
-                    // Điều chỉnh điểm số theo màu
-                    score += piece.color === PieceColor.WHITE
-                        ? (pieceScore + positionScore)
-                        : -(pieceScore + positionScore);
+                    // Đánh giá điều kiện di chuyển
+                    const mobilityScore = this.calculateMobilityScore(gameState, piece, { row, col });
+
+                    // Kiểm soát trung tâm
+                    const centerControlScore = this.calculateCenterControlScore(row, col);
+
+                    // Tổng điểm cho quân
+                    const totalPieceScore =
+                        (pieceScore * STRATEGIC_WEIGHTS.PIECE_VALUE) +
+                        (positionScore * STRATEGIC_WEIGHTS.PIECE_POSITION) +
+                        (mobilityScore * STRATEGIC_WEIGHTS.MOBILITY) +
+                        (centerControlScore * STRATEGIC_WEIGHTS.CENTER_CONTROL);
+
+                    score += multiplier * totalPieceScore;
                 }
             }
         }
 
-        // Thêm điểm cho quân trong piece bank
-        gameState.pieceBank[PieceColor.WHITE].forEach(piece => {
-            score += PIECE_SCORES[piece.type];
-        });
-        gameState.pieceBank[PieceColor.BLACK].forEach(piece => {
-            score -= PIECE_SCORES[piece.type];
-        });
+        // Điểm cho quân trong piece bank
+        const pieceBankScores = gameState.pieceBank[PieceColor.WHITE].reduce(
+            (total, piece) => total + PIECE_VALUES[piece.type], 0
+        ) - gameState.pieceBank[PieceColor.BLACK].reduce(
+            (total, piece) => total + PIECE_VALUES[piece.type], 0
+        );
 
-        return score;
+        // Điểm an toàn của vua
+        const kingSafetyScore = this.calculateKingSafetyScore(gameState);
+
+        return score + pieceBankScores + (kingSafetyScore * STRATEGIC_WEIGHTS.KING_SAFETY);
     }
 
+    // Tính điểm di chuyển (mobility)
+    private calculateMobilityScore(gameState: GameState, piece: ChessPiece, position: Position): number {
+        const validMoves = getValidMoves(gameState, position);
+        return validMoves.length * 0.1; // Mỗi nước đi thêm 0.1 điểm
+    }
+
+    // Tính điểm kiểm soát trung tâm
+    private calculateCenterControlScore(row: number, col: number): number {
+        const centerRows = [1, 2, 3, 4];
+        const centerCols = [1, 2, 3, 4];
+
+        if (centerRows.includes(row) && centerCols.includes(col)) {
+            return 2; // Quân ở trung tâm được thưởng điểm
+        }
+
+        return 0;
+    }
+
+    // Tính điểm an toàn của vua
+    private calculateKingSafetyScore(gameState: GameState): number {
+        const kingColor = gameState.currentPlayer;
+        const opponentColor = kingColor === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+
+        // Tìm vua
+        let kingPosition: Position | null = null;
+        for (let row = 0; row < 6; row++) {
+            for (let col = 0; col < 6; col++) {
+                const piece = gameState.board[row][col];
+                if (piece?.type === PieceType.KING && piece?.color === kingColor) {
+                    kingPosition = { row, col };
+                    break;
+                }
+            }
+            if (kingPosition) break;
+        }
+
+        if (!kingPosition) return 0;
+
+        // Kiểm tra các quân đe dọa vua
+        const threateningPieces = this.findThreateningPieces(gameState, kingPosition, opponentColor);
+
+        // Điểm âm nếu có nhiều quân đe dọa
+        return -threateningPieces.length * 2;
+    }
+
+    // Tìm các quân đe dọa vua
+    private findThreateningPieces(gameState: GameState, kingPosition: Position, opponentColor: PieceColor): Position[] {
+        const threateningPieces: Position[] = [];
+
+        for (let row = 0; row < 6; row++) {
+            for (let col = 0; col < 6; col++) {
+                const piece = gameState.board[row][col];
+                if (piece && piece.color === opponentColor) {
+                    const validMoves = getValidMoves(gameState, { row, col });
+                    if (validMoves.some(move =>
+                        move.row === kingPosition.row && move.col === kingPosition.col
+                    )) {
+                        threateningPieces.push({ row, col });
+                    }
+                }
+            }
+        }
+
+        return threateningPieces;
+    }
+
+    // Thuật toán Minimax với Alpha-Beta Pruning và Transposition Table
     private minimax(
         gameState: GameState,
         depth: number,
         alpha: number,
         beta: number,
-        maximizingPlayer: boolean
+        maximizingPlayer: boolean,
+        nullMove = false
     ): number {
-        if (depth === 0 || gameState.isCheckmate || gameState.isStalemate) {
-            return this.evaluateBoard(gameState);
+        // Kiểm tra bảng tra cứu
+        const stateHash = this.hashGameState(gameState);
+        const cachedResult = this.transpositionTable.get(stateHash);
+        if (cachedResult && cachedResult.depth >= depth) {
+            return cachedResult.score;
         }
+
+        // Điều kiện dừng
+        if (depth === 0 || gameState.isCheckmate || gameState.isStalemate) {
+            const score = this.evaluateBoard(gameState);
+            this.transpositionTable.set(stateHash, { depth, score, type: 'exact' });
+            return score;
+        }
+
+        // Null Move Pruning - kỹ thuật cắt tỉa nâng cao
+        if (!nullMove && depth > 2) {
+            const nullMoveReduction = Math.floor(depth / 3);
+            const nullMoveScore = -this.minimax(
+                { ...gameState, currentPlayer: gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE },
+                depth - nullMoveReduction - 1,
+                -beta,
+                -beta + 1,
+                !maximizingPlayer,
+                true
+            );
+
+            if (nullMoveScore >= beta) {
+                return beta;
+            }
+        }
+
+        // Sắp xếp và lọc các nước đi
+        const moves = this.orderMoves(this.getAllValidMoves(gameState, gameState.currentPlayer), gameState);
 
         if (maximizingPlayer) {
             let maxEval = -Infinity;
-            const moves = this.getAllValidMoves(gameState, gameState.currentPlayer);
-
             for (const move of moves) {
                 const newState = this.applyMove(gameState, move);
                 const evaluation = this.minimax(
@@ -137,16 +318,27 @@ export class ChessAI {
                 maxEval = Math.max(maxEval, evaluation);
                 alpha = Math.max(alpha, evaluation);
 
+                // Kiểm tra điều kiện cắt tỉa
                 if (beta <= alpha) {
-                    break; // Beta cut-off
+                    // Lưu vào bảng tra cứu với loại lượt cắt tỉa
+                    this.transpositionTable.set(stateHash, {
+                        depth,
+                        score: maxEval,
+                        type: 'lowerbound'
+                    });
+                    break;
                 }
             }
 
+            // Lưu vào bảng tra cứu
+            this.transpositionTable.set(stateHash, {
+                depth,
+                score: maxEval,
+                type: 'exact'
+            });
             return maxEval;
         } else {
             let minEval = Infinity;
-            const moves = this.getAllValidMoves(gameState, gameState.currentPlayer);
-
             for (const move of moves) {
                 const newState = this.applyMove(gameState, move);
                 const evaluation = this.minimax(
@@ -160,15 +352,54 @@ export class ChessAI {
                 minEval = Math.min(minEval, evaluation);
                 beta = Math.min(beta, evaluation);
 
+                // Kiểm tra điều kiện cắt tỉa
                 if (beta <= alpha) {
-                    break; // Alpha cut-off
+                    // Lưu vào bảng tra cứu với loại lượt cắt tỉa
+                    this.transpositionTable.set(stateHash, {
+                        depth,
+                        score: minEval,
+                        type: 'upperbound'
+                    });
+                    break;
                 }
             }
 
+            // Lưu vào bảng tra cứu
+            this.transpositionTable.set(stateHash, {
+                depth,
+                score: minEval,
+                type: 'exact'
+            });
             return minEval;
         }
     }
 
+    // Sắp xếp các nước đi để cải thiện hiệu quả cắt tỉa
+    // Sắp xếp các nước đi để cải thiện hiệu quả cắt tỉa
+    private orderMoves(moves: AIMove[], gameState: GameState): AIMove[] {
+        return moves.sort((a, b) => {
+            // Ưu tiên các nước ăn quân quan trọng
+            const aCapture = a.from && gameState.board[a.to.row][a.to.col] ?
+                PIECE_VALUES[gameState.board[a.to.row][a.to.col]!.type] : 0;
+            const bCapture = b.from && gameState.board[b.to.row][b.to.col] ?
+                PIECE_VALUES[gameState.board[b.to.row][b.to.col]!.type] : 0;
+
+            // Ưu tiên nước ăn quân có giá trị cao hơn
+            if (aCapture !== bCapture) {
+                return bCapture - aCapture;
+            }
+
+            // Ưu tiên các nước di chuyển quân quan trọng
+            const aPieceValue = a.piece ? PIECE_VALUES[a.piece.type] : 0;
+            const bPieceValue = b.piece ? PIECE_VALUES[b.piece.type] : 0;
+
+            return bPieceValue - aPieceValue;
+        });
+    }
+
+
+
+    // Lấy tất cả các nước đi hợp lệ
     private getAllValidMoves(gameState: GameState, color: PieceColor): AIMove[] {
         const moves: AIMove[] = [];
 
@@ -183,7 +414,8 @@ export class ChessAI {
                             from: { row, col },
                             to: move,
                             piece,
-                            score: 0
+                            score: 0,
+                            capturedPiece: gameState.board[move.row][move.col] || undefined
                         });
                     });
                 }
@@ -206,6 +438,7 @@ export class ChessAI {
         return moves;
     }
 
+    // Áp dụng nước đi
     private applyMove(gameState: GameState, move: AIMove): GameState {
         if (move.from) {
             // Nước đi di chuyển quân
@@ -219,21 +452,23 @@ export class ChessAI {
         return gameState;
     }
 
+    // Tìm nước đi tốt nhất
     findBestMove(gameState: GameState): AIMove | null {
-        console.log("AI đang tìm nước đi tốt nhất...");
-        const currentColor = gameState.currentPlayer;
-        console.log("Màu hiện tại:", currentColor);
+        // Xóa bảng tra cứu để tránh chiếm nhiều bộ nhớ
+        this.transpositionTable.clear();
 
+        const currentColor = gameState.currentPlayer;
         const moves = this.getAllValidMoves(gameState, currentColor);
-        console.log("Số nước đi hợp lệ tìm thấy:", moves.length);
 
         if (moves.length === 0) {
             console.log("Không có nước đi hợp lệ");
             return null;
         }
+
         let bestMove: AIMove | null = null;
         let bestScore = currentColor === PieceColor.WHITE ? -Infinity : Infinity;
 
+        // Phân tích song song các nước đi
         for (const move of moves) {
             const newState = this.applyMove(gameState, move);
             const score = this.minimax(
