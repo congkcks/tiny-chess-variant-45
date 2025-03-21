@@ -10,6 +10,7 @@ import {
 
 // Get all valid moves for a piece
 // Get all valid moves for a piece
+// Get all valid moves for a piece
 export const getValidMoves = (gameState: GameState, position: Position): Position[] => {
   const { board, currentPlayer } = gameState;
   const piece = board[position.row][position.col];
@@ -20,7 +21,12 @@ export const getValidMoves = (gameState: GameState, position: Position): Positio
 
   let validMoves: Position[] = [];
 
-  // Thực hiện logic di chuyển bình thường
+  // Nếu vua đang bị chiếu, xử lý đặc biệt
+  if (isKingInCheck(gameState)) {
+    return getValidMovesWhenInCheck(gameState, position);
+  }
+
+  // Tính toán nước đi thông thường
   switch (piece.type) {
     case PieceType.PAWN:
       validMoves = getValidPawnMoves(gameState, position);
@@ -41,54 +47,39 @@ export const getValidMoves = (gameState: GameState, position: Position): Positio
       validMoves = getValidKingMoves(gameState, position);
       break;
     default:
-      validMoves = [];
+      return [];
   }
 
-  // Kiểm tra an toàn cho vua chỉ khi không trong trạng thái bị chiếu
-  if (!isKingInCheck(gameState)) {
-    validMoves = validMoves.filter(move => {
-      // Tạo một bàn cờ tạm thời để thử nước đi
-      const tempBoard = board.map(row => [...row]);
-      const movingPiece = tempBoard[position.row][position.col];
-
-      // Di chuyển quân cờ
-      tempBoard[move.row][move.col] = movingPiece;
-      tempBoard[position.row][position.col] = null;
-
-      // Tạo một gameState tạm thời
-      const tempGameState: GameState = {
-        ...gameState,
-        board: tempBoard
-      };
-
-      // Kiểm tra xem vua còn bị chiếu không sau nước đi này
-      return !isKingInCheck(tempGameState);
-    });
-  }
+  // Lọc các nước đi không để vua bị chiếu
+  validMoves = validMoves.filter(move => {
+    return isMoveSafeForKing(gameState, position, move);
+  });
 
   return validMoves;
 };
+
 // Hàm kiểm tra xem nước đi có an toàn cho vua không
 const isMoveSafeForKing = (gameState: GameState, from: Position, to: Position): boolean => {
   const { board, currentPlayer } = gameState;
 
-  // Tạo một bàn cờ tạm thời để thử nước đi
+  // Create a temporary board to test the move
   const tempBoard = board.map(row => [...row]);
   const movingPiece = tempBoard[from.row][from.col];
 
-  // Di chuyển quân cờ
+  // Make the move on the temporary board
   tempBoard[to.row][to.col] = movingPiece;
   tempBoard[from.row][from.col] = null;
 
-  // Tạo một gameState tạm thời
+  // Create a temporary game state
   const tempGameState: GameState = {
     ...gameState,
     board: tempBoard
   };
 
-  // Kiểm tra xem vua còn bị chiếu không sau nước đi này
-  return !isKingInCheck(tempGameState);
+  // Check if the king is still in check after this move
+  return !isKingInCheck(tempGameState, currentPlayer);
 };
+
 // Get valid moves for a pawn
 const getValidPawnMoves = (gameState: GameState, position: Position): Position[] => {
   const { board, currentPlayer } = gameState;
@@ -152,163 +143,53 @@ const getAttackingPieces = (gameState: GameState): Position[] => {
     return attackingPieces;
   }
 
-  // Tìm quân đối phương có thể tấn công vua
+  // Tạo trạng thái tạm thời với người chơi là đối phương
   const opponentColor = currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  const tempGameState: GameState = {
+    ...gameState,
+    currentPlayer: opponentColor
+  };
 
+  // Kiểm tra từng quân cờ của đối phương
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
       if (piece && piece.color === opponentColor) {
-        // Kiểm tra từng loại quân với logic riêng
-        switch (piece.type) {
-          case PieceType.PAWN: {
-            const direction = opponentColor === PieceColor.WHITE ? 1 : -1;
-            const capturePositions: Position[] = [
-              { row: row + direction, col: col - 1 },
-              { row: row + direction, col: col + 1 }
-            ];
-            if (capturePositions.some(pos =>
-              pos.row === kingPosition!.row && pos.col === kingPosition!.col
-            )) {
-              attackingPieces.push({ row, col });
-            }
-            break;
-          }
-          case PieceType.ROOK: {
-            const directions = [
-              { row: 1, col: 0 },  // Down
-              { row: -1, col: 0 }, // Up
-              { row: 0, col: 1 },  // Right
-              { row: 0, col: -1 }   // Left
-            ];
-            const canAttack = directions.some(dir => {
-              for (let i = 1; i < 6; i++) {
-                const newPos: Position = {
-                  row: row + i * dir.row,
-                  col: col + i * dir.col
-                };
-
-                if (!isValidPosition(newPos)) break;
-
-                const targetPiece = board[newPos.row][newPos.col];
-                if (targetPiece) {
-                  if (targetPiece.type === PieceType.KING && targetPiece.color === currentPlayer) {
-                    return true;
-                  }
-                  break;
-                }
-              }
-              return false;
-            });
-            if (canAttack) attackingPieces.push({ row, col });
-            break;
-          }
-          case PieceType.KNIGHT: {
-            const knightMoves = [
-              { row: 2, col: 1 }, { row: 2, col: -1 },
-              { row: -2, col: 1 }, { row: -2, col: -1 },
-              { row: 1, col: 2 }, { row: 1, col: -2 },
-              { row: -1, col: 2 }, { row: -1, col: -2 }
-            ];
-            const canAttack = knightMoves.some(move => {
-              const newPos: Position = {
-                row: row + move.row,
-                col: col + move.col
-              };
-              return isValidPosition(newPos) &&
-                newPos.row === kingPosition!.row &&
-                newPos.col === kingPosition!.col;
-            });
-            if (canAttack) attackingPieces.push({ row, col });
-            break;
-          }
-          case PieceType.BISHOP: {
-            const directions = [
-              { row: 1, col: 1 },  // Down-Right
-              { row: 1, col: -1 }, // Down-Left
-              { row: -1, col: 1 }, // Up-Right
-              { row: -1, col: -1 }  // Up-Left
-            ];
-            const canAttack = directions.some(dir => {
-              for (let i = 1; i < 6; i++) {
-                const newPos: Position = {
-                  row: row + i * dir.row,
-                  col: col + i * dir.col
-                };
-
-                if (!isValidPosition(newPos)) break;
-
-                const targetPiece = board[newPos.row][newPos.col];
-                if (targetPiece) {
-                  if (targetPiece.type === PieceType.KING && targetPiece.color === currentPlayer) {
-                    return true;
-                  }
-                  break;
-                }
-              }
-              return false;
-            });
-            if (canAttack) attackingPieces.push({ row, col });
-            break;
-          }
-          case PieceType.QUEEN: {
-            const rookDirections = [
-              { row: 1, col: 0 }, { row: -1, col: 0 },
-              { row: 0, col: 1 }, { row: 0, col: -1 }
-            ];
-            const bishopDirections = [
-              { row: 1, col: 1 }, { row: 1, col: -1 },
-              { row: -1, col: 1 }, { row: -1, col: -1 }
-            ];
-            const directions = [...rookDirections, ...bishopDirections];
-
-            const canAttack = directions.some(dir => {
-              for (let i = 1; i < 6; i++) {
-                const newPos: Position = {
-                  row: row + i * dir.row,
-                  col: col + i * dir.col
-                };
-
-                if (!isValidPosition(newPos)) break;
-
-                const targetPiece = board[newPos.row][newPos.col];
-                if (targetPiece) {
-                  if (targetPiece.type === PieceType.KING && targetPiece.color === currentPlayer) {
-                    return true;
-                  }
-                  break;
-                }
-              }
-              return false;
-            });
-            if (canAttack) attackingPieces.push({ row, col });
-            break;
-          }
-          case PieceType.KING: {
-            const kingMoves = [
-              { row: 1, col: 0 }, { row: -1, col: 0 },
-              { row: 0, col: 1 }, { row: 0, col: -1 },
-              { row: 1, col: 1 }, { row: 1, col: -1 },
-              { row: -1, col: 1 }, { row: -1, col: -1 }
-            ];
-            const canAttack = kingMoves.some(move => {
-              const newPos: Position = {
-                row: row + move.row,
-                col: col + move.col
-              };
-              return isValidPosition(newPos) &&
-                newPos.row === kingPosition!.row &&
-                newPos.col === kingPosition!.col;
-            });
-            if (canAttack) attackingPieces.push({ row, col });
-            break;
-          }
+        const position: Position = { row, col };
+        const validMoves = getPseudoLegalMoves(tempGameState, position);
+        if (validMoves.some(move => move.row === kingPosition!.row && move.col === kingPosition!.col)) {
+          attackingPieces.push(position);
         }
       }
     }
   }
 
   return attackingPieces;
+};
+const getPseudoLegalMoves = (gameState: GameState, position: Position): Position[] => {
+  const { board, currentPlayer } = gameState;
+  const piece = board[position.row][position.col];
+
+  if (!piece || piece.color !== currentPlayer) {
+    return [];
+  }
+
+  switch (piece.type) {
+    case PieceType.PAWN:
+      return getValidPawnMoves(gameState, position);
+    case PieceType.ROOK:
+      return getValidRookMoves(gameState, position);
+    case PieceType.KNIGHT:
+      return getValidKnightMoves(gameState, position);
+    case PieceType.BISHOP:
+      return getValidBishopMoves(gameState, position);
+    case PieceType.QUEEN:
+      return getValidQueenMoves(gameState, position);
+    case PieceType.KING:
+      return getValidKingMoves(gameState, position);
+    default:
+      return [];
+  }
 };
 // Get valid moves for a rook
 const getValidRookMoves = (gameState: GameState, position: Position): Position[] => {
@@ -347,13 +228,23 @@ const findBlockingPath = (from: Position, to: Position): Position[] => {
   const rowDiff = to.row - from.row;
   const colDiff = to.col - from.col;
 
-  // Xác định hướng di chuyển
+  // Determine direction of movement
   const rowStep = rowDiff === 0 ? 0 : (rowDiff > 0 ? 1 : -1);
   const colStep = colDiff === 0 ? 0 : (colDiff > 0 ? 1 : -1);
+
+  // Check if this is a valid line (straight or diagonal)
+  const isDiagonal = Math.abs(rowDiff) === Math.abs(colDiff);
+  const isStraight = rowDiff === 0 || colDiff === 0;
+
+  // If not a valid line, return empty path
+  if (!isDiagonal && !isStraight) {
+    return path;
+  }
 
   let currentRow = from.row + rowStep;
   let currentCol = from.col + colStep;
 
+  // Collect all positions between 'from' and 'to' (not including endpoints)
   while (currentRow !== to.row || currentCol !== to.col) {
     path.push({ row: currentRow, col: currentCol });
     currentRow += rowStep;
@@ -362,6 +253,7 @@ const findBlockingPath = (from: Position, to: Position): Position[] => {
 
   return path;
 };
+
 // Get valid moves for a knight
 const getValidKnightMoves = (gameState: GameState, position: Position): Position[] => {
   const { board, currentPlayer } = gameState;
@@ -546,18 +438,13 @@ const getValidMovesForPiece = (gameState: GameState, position: Position, pieceTy
       return [];
   }
 };
-// Hàm hỗ trợ để lấy tất cả các nước đi hợp lệ cho một quân cờ cụ thể
-// Check if the current player's king is in check
-// Check if the current player's king is in check
+
 export const isKingInCheck = (gameState: GameState, playerToCheck?: PieceColor): boolean => {
   const { board } = gameState;
-  // Sử dụng người chơi được chỉ định hoặc người chơi hiện tại
   const currentPlayer = playerToCheck || gameState.currentPlayer;
 
   // Tìm vị trí vua
   let kingPosition: Position | null = null;
-
-  // Tìm vua của người chơi hiện tại
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
@@ -574,157 +461,22 @@ export const isKingInCheck = (gameState: GameState, playerToCheck?: PieceColor):
     return false;
   }
 
-  // Kiểm tra nếu bất kỳ quân cờ nào của đối thủ có thể tấn công vua
+  // Tạo trạng thái tạm thời với người chơi là đối phương
   const opponentColor = currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
+  const tempGameState: GameState = {
+    ...gameState,
+    currentPlayer: opponentColor
+  };
 
-  // Kiểm tra các quân tấn công theo từng loại quân
+  // Kiểm tra nước đi giả hợp lệ của quân đối phương
   for (let row = 0; row < 6; row++) {
     for (let col = 0; col < 6; col++) {
       const piece = board[row][col];
       if (piece && piece.color === opponentColor) {
-        switch (piece.type) {
-          case PieceType.PAWN: {
-            const direction = opponentColor === PieceColor.WHITE ? 1 : -1;
-            const capturePositions: Position[] = [
-              { row: row + direction, col: col - 1 },
-              { row: row + direction, col: col + 1 }
-            ];
-            if (capturePositions.some(pos =>
-              pos.row === kingPosition!.row && pos.col === kingPosition!.col
-            )) {
-              return true;
-            }
-            break;
-          }
-          case PieceType.ROOK: {
-            const directions = [
-              { row: 1, col: 0 },  // Down
-              { row: -1, col: 0 }, // Up
-              { row: 0, col: 1 },  // Right
-              { row: 0, col: -1 }   // Left
-            ];
-            const canAttack = directions.some(dir => {
-              for (let i = 1; i < 6; i++) {
-                const newPos: Position = {
-                  row: row + i * dir.row,
-                  col: col + i * dir.col
-                };
-
-                if (!isValidPosition(newPos)) break;
-
-                const targetPiece = board[newPos.row][newPos.col];
-                if (targetPiece) {
-                  if (targetPiece.type === PieceType.KING && targetPiece.color === currentPlayer) {
-                    return true;
-                  }
-                  break;
-                }
-              }
-              return false;
-            });
-            if (canAttack) return true;
-            break;
-          }
-          case PieceType.KNIGHT: {
-            const knightMoves = [
-              { row: 2, col: 1 }, { row: 2, col: -1 },
-              { row: -2, col: 1 }, { row: -2, col: -1 },
-              { row: 1, col: 2 }, { row: 1, col: -2 },
-              { row: -1, col: 2 }, { row: -1, col: -2 }
-            ];
-            const canAttack = knightMoves.some(move => {
-              const newPos: Position = {
-                row: row + move.row,
-                col: col + move.col
-              };
-              return isValidPosition(newPos) &&
-                newPos.row === kingPosition!.row &&
-                newPos.col === kingPosition!.col;
-            });
-            if (canAttack) return true;
-            break;
-          }
-          case PieceType.BISHOP: {
-            const directions = [
-              { row: 1, col: 1 },  // Down-Right
-              { row: 1, col: -1 }, // Down-Left
-              { row: -1, col: 1 }, // Up-Right
-              { row: -1, col: -1 }  // Up-Left
-            ];
-            const canAttack = directions.some(dir => {
-              for (let i = 1; i < 6; i++) {
-                const newPos: Position = {
-                  row: row + i * dir.row,
-                  col: col + i * dir.col
-                };
-
-                if (!isValidPosition(newPos)) break;
-
-                const targetPiece = board[newPos.row][newPos.col];
-                if (targetPiece) {
-                  if (targetPiece.type === PieceType.KING && targetPiece.color === currentPlayer) {
-                    return true;
-                  }
-                  break;
-                }
-              }
-              return false;
-            });
-            if (canAttack) return true;
-            break;
-          }
-          case PieceType.QUEEN: {
-            const rookDirections = [
-              { row: 1, col: 0 }, { row: -1, col: 0 },
-              { row: 0, col: 1 }, { row: 0, col: -1 }
-            ];
-            const bishopDirections = [
-              { row: 1, col: 1 }, { row: 1, col: -1 },
-              { row: -1, col: 1 }, { row: -1, col: -1 }
-            ];
-            const directions = [...rookDirections, ...bishopDirections];
-
-            const canAttack = directions.some(dir => {
-              for (let i = 1; i < 6; i++) {
-                const newPos: Position = {
-                  row: row + i * dir.row,
-                  col: col + i * dir.col
-                };
-
-                if (!isValidPosition(newPos)) break;
-
-                const targetPiece = board[newPos.row][newPos.col];
-                if (targetPiece) {
-                  if (targetPiece.type === PieceType.KING && targetPiece.color === currentPlayer) {
-                    return true;
-                  }
-                  break;
-                }
-              }
-              return false;
-            });
-            if (canAttack) return true;
-            break;
-          }
-          case PieceType.KING: {
-            const kingMoves = [
-              { row: 1, col: 0 }, { row: -1, col: 0 },
-              { row: 0, col: 1 }, { row: 0, col: -1 },
-              { row: 1, col: 1 }, { row: 1, col: -1 },
-              { row: -1, col: 1 }, { row: -1, col: -1 }
-            ];
-            const canAttack = kingMoves.some(move => {
-              const newPos: Position = {
-                row: row + move.row,
-                col: col + move.col
-              };
-              return isValidPosition(newPos) &&
-                newPos.row === kingPosition!.row &&
-                newPos.col === kingPosition!.col;
-            });
-            if (canAttack) return true;
-            break;
-          }
+        const position: Position = { row, col };
+        const pseudoLegalMoves = getPseudoLegalMoves(tempGameState, position);
+        if (pseudoLegalMoves.some(move => move.row === kingPosition!.row && move.col === kingPosition!.col)) {
+          return true;
         }
       }
     }
@@ -840,108 +592,74 @@ export const checkIfCheckmate = (gameState: GameState): boolean => {
   return true;
 };
 export const getValidMovesWhenInCheck = (gameState: GameState, position: Position): Position[] => {
-  // Nếu không bị chiếu, trả về nước đi bình thường
-  if (!isKingInCheck(gameState)) {
-    return getValidMoves(gameState, position);
-  }
-
   const { board, currentPlayer } = gameState;
   const piece = board[position.row][position.col];
 
-  // Chỉ xử lý các quân của người chơi hiện tại
+  // Kiểm tra quân cờ có tồn tại và thuộc về người chơi hiện tại không
   if (!piece || piece.color !== currentPlayer) {
     return [];
   }
 
-  // Lấy các quân đang tấn công vua
-  const attackingPieces = getAttackingPieces(gameState);
-
-  // Nếu nhiều hơn 1 quân tấn công, chỉ vua mới có thể di chuyển
-  if (attackingPieces.length > 1 && piece.type !== PieceType.KING) {
+  // Tìm vị trí vua
+  const kingPos = findKingPosition(board, currentPlayer);
+  if (!kingPos) {
+    console.error('King not found');
     return [];
   }
 
-  // Nếu có 1 quân tấn công
-  if (attackingPieces.length === 1) {
-    const attackingPiecePos = attackingPieces[0];
-    const attackingPiece = board[attackingPiecePos.row][attackingPiecePos.col];
+  // Lấy danh sách các quân đang tấn công vua
+  const attackingPieces = getAttackingPieces(gameState);
 
-    // Tìm vị trí vua
-    const kingPos = findKingPosition(board, currentPlayer);
-    if (!kingPos) {
-      console.error('Không tìm thấy vua');
-      return [];
-    }
+  // Trường hợp 1: Nếu quân được chọn là vua
+  if (piece.type === PieceType.KING) {
+    const kingMoves = getValidKingMoves(gameState, position);
+    return kingMoves.filter(move => {
+      const tempBoard = board.map(row => [...row]);
+      tempBoard[move.row][move.col] = piece;
+      tempBoard[position.row][position.col] = null;
 
-    // Nếu là vua
-    if (piece.type === PieceType.KING) {
-      // Lấy nước đi bình thường
-      let validMoves = getValidMoves(gameState, position);
-
-      // Lọc các nước đi để tránh bị chiếu
-      validMoves = validMoves.filter(move => {
-        const tempBoard = board.map(row => [...row]);
-        tempBoard[move.row][move.col] = piece;
-        tempBoard[position.row][position.col] = null;
-
-        const tempGameState = {
-          ...gameState,
-          board: tempBoard
-        };
-
-        return !isKingInCheck(tempGameState);
-      });
-
-      return validMoves;
-    } else {
-      // Lấy nước đi bình thường
-      let validMoves = getValidMoves(gameState, position);
-
-      // Kiểm tra từng nước đi
-      const allowedMoves = validMoves.filter(move => {
-        // Nếu ăn được quân tấn công
-        if (move.row === attackingPiecePos.row && move.col === attackingPiecePos.col) {
-          return true;
-        }
-
-        // Kiểm tra chặn đường tấn công (chỉ áp dụng với Rook, Bishop, Queen)
-        if ([PieceType.ROOK, PieceType.BISHOP, PieceType.QUEEN].includes(attackingPiece!.type)) {
-          // Tìm đường thẳng từ quân tấn công đến vua
-          const blockingPath = findBlockingPath(attackingPiecePos, kingPos);
-
-          // Kiểm tra nước đi có nằm trên đường chặn không
-          const isOnBlockingPath = blockingPath.some(pos =>
-            pos.row === move.row && pos.col === move.col
-          );
-
-          // Nếu không phải quân Knight và nằm trên đường chặn
-          if (piece.type !== PieceType.KNIGHT && isOnBlockingPath) {
-            // Tạo bàn cờ tạm để kiểm tra xem nước đi có giải cứu vua không
-            const tempBoard = board.map(row => [...row]);
-            const movingPiece = tempBoard[position.row][position.col];
-
-            // Di chuyển quân cờ
-            tempBoard[move.row][move.col] = movingPiece;
-            tempBoard[position.row][position.col] = null;
-
-            const tempGameState = { ...gameState, board: tempBoard };
-
-            // Kiểm tra xem vua còn bị chiếu không
-            return !isKingInCheck(tempGameState);
-          }
-        }
-
-        // Đối với Knight và các quân khác, chỉ được ăn quân tấn công
-        return false;
-      });
-
-      return allowedMoves;
-    }
+      const tempGameState = {
+        ...gameState,
+        board: tempBoard
+      };
+      return !isKingInCheck(tempGameState, currentPlayer);
+    });
   }
 
-  // Trường hợp không bị chiếu, trả về nước đi bình thường
-  return getValidMoves(gameState, position);
+  // Trường hợp 2: Nhiều quân tấn công - chỉ vua có thể di chuyển
+  if (attackingPieces.length > 1) {
+    return []; // Không có nước đi nào cho các quân khác
+  }
+
+  // Trường hợp 3: Một quân tấn công - có thể ăn quân tấn công hoặc chặn đường tấn công
+  const attackerPos = attackingPieces[0];
+  const attacker = board[attackerPos.row][attackerPos.col];
+
+  // Lấy tất cả các nước đi giả hợp lệ cho quân cờ bằng getPseudoLegalMoves
+  const normalMoves = getPseudoLegalMoves(gameState, position);
+
+  // Lọc các nước đi để chỉ giữ lại những nước đi giúp thoát chiếu
+  return normalMoves.filter(move => {
+    // Lựa chọn 1: Ăn quân tấn công
+    if (move.row === attackerPos.row && move.col === attackerPos.col) {
+      return isMoveSafeForKing(gameState, position, move);
+    }
+
+    // Lựa chọn 2: Chặn đường tấn công (không áp dụng cho mã)
+    if (attacker.type !== PieceType.KNIGHT) {
+      const blockingPath = findBlockingPath(attackerPos, kingPos);
+      const isBlocking = blockingPath.some(pathPos =>
+        pathPos.row === move.row && pathPos.col === move.col
+      );
+      if (isBlocking) {
+        return isMoveSafeForKing(gameState, position, move);
+      }
+    }
+
+    return false;
+  });
 };
+
 // Hàm hỗ trợ tìm vị trí vua
 const findKingPosition = (board: (ChessPiece | null)[][], color: PieceColor): Position | null => {
   for (let row = 0; row < 6; row++) {
