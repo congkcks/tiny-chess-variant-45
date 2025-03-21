@@ -2,10 +2,10 @@ import { FC, useState, useEffect } from 'react';
 import ChessPiece from './ChessPiece';
 import PieceBank from './PieceBank';
 import CheckmateModal from './CheckmateModal';
-import { 
-  ChessPiece as ChessPieceType, 
-  GameState, 
-  PieceColor, 
+import {
+  ChessPiece as ChessPieceType,
+  GameState,
+  PieceColor,
   PieceType,
   Position,
   positionToAlgebraic
@@ -21,14 +21,16 @@ interface ChessBoardProps {
   perspective?: PieceColor;
   showCoordinates?: boolean;
   onNewGame?: () => void;
+  disabled?: boolean; // 
 }
 
-const ChessBoard: FC<ChessBoardProps> = ({ 
-  gameState, 
-  onMove, 
+const ChessBoard: FC<ChessBoardProps> = ({
+  gameState,
+  onMove,
   perspective = PieceColor.WHITE,
   showCoordinates = true,
-  onNewGame
+  onNewGame,
+  disabled = false
 }) => {
   const [selectedPosition, setSelectedPosition] = useState<Position | null>(null);
   const [validMoves, setValidMoves] = useState<Position[]>([]);
@@ -39,7 +41,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
   const boardRows = [...Array(6).keys()];
   const boardCols = [...Array(6).keys()];
-  
+
   if (perspective === PieceColor.BLACK) {
     boardRows.reverse();
     boardCols.reverse();
@@ -55,12 +57,12 @@ const ChessBoard: FC<ChessBoardProps> = ({
     if (gameState.isCheckmate) {
       const winner = gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
       const winnerText = winner === PieceColor.WHITE ? "Trắng" : "Đen";
-      
+
       toast.error(`Chiếu hết! Người chơi quân ${winnerText} đã thắng!`, {
         duration: 5000,
         position: "top-center",
       });
-      
+
       setShowCheckmateModal(true);
     } else {
       setShowCheckmateModal(false);
@@ -68,6 +70,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
   }, [gameState.isCheckmate, gameState.currentPlayer]);
 
   const handlePieceBankSelect = (piece: ChessPieceType) => {
+    if (disabled) return;
     if (piece.color !== gameState.currentPlayer) {
       toast.error("Chỉ có thể thả quân trong lượt của bạn!", {
         duration: 3000,
@@ -75,13 +78,13 @@ const ChessBoard: FC<ChessBoardProps> = ({
       });
       return;
     }
-    
+
     setSelectedPosition(null);
     setIsDroppingPiece(piece);
     setDropHighlight(true);
     const validDropSquares = getValidDropSquares(gameState, piece);
     setValidMoves(validDropSquares);
-    
+
     toast.info("Chọn ô để thả quân", {
       duration: 3000,
       position: "top-center",
@@ -90,12 +93,13 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
   const handleSquareClick = (position: Position) => {
     const { board, currentPlayer } = gameState;
+    if (disabled) return;
 
     if (isDroppingPiece) {
       if (validMoves.some(move => move.row === position.row && move.col === position.col)) {
         const newState = dropPiece(gameState, isDroppingPiece, position);
         onMove(newState);
-        
+
         if (newState.isCheckmate) {
           const winner = currentPlayer;
           const winnerText = winner === PieceColor.WHITE ? "Trắng" : "Đen";
@@ -114,9 +118,9 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
     if (promotionPosition) return;
 
-    if (selectedPosition && 
-        selectedPosition.row === position.row && 
-        selectedPosition.col === position.col) {
+    if (selectedPosition &&
+      selectedPosition.row === position.row &&
+      selectedPosition.col === position.col) {
       setSelectedPosition(null);
       setValidMoves([]);
       return;
@@ -124,18 +128,18 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
     if (selectedPosition && validMoves.some(move => move.row === position.row && move.col === position.col)) {
       const movingPiece = board[selectedPosition.row][selectedPosition.col];
-      
-      if (movingPiece && 
-          movingPiece.type === PieceType.PAWN &&
-          ((movingPiece.color === PieceColor.WHITE && position.row === 5) ||
-           (movingPiece.color === PieceColor.BLACK && position.row === 0))) {
+
+      if (movingPiece &&
+        movingPiece.type === PieceType.PAWN &&
+        ((movingPiece.color === PieceColor.WHITE && position.row === 5) ||
+          (movingPiece.color === PieceColor.BLACK && position.row === 0))) {
         setPromotionPosition(position);
         return;
       }
-      
+
       const newState = makeMove(gameState, selectedPosition, position);
       onMove(newState);
-      
+
       if (newState.isCheckmate) {
         const winner = currentPlayer;
         const winnerText = winner === PieceColor.WHITE ? "Trắng" : "Đen";
@@ -145,7 +149,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
       } else if (newState.isCheck) {
         toast.warning('Chiếu!');
       }
-      
+
       setSelectedPosition(null);
       setValidMoves([]);
       return;
@@ -164,17 +168,17 @@ const ChessBoard: FC<ChessBoardProps> = ({
 
   const handlePromotion = (promoteTo: PieceType) => {
     if (!selectedPosition || !promotionPosition) return;
-    
+
     const newState = makeMove(gameState, selectedPosition, promotionPosition, promoteTo);
     onMove(newState);
-    
+
     if (newState.isCheckmate) {
       const winner = gameState.currentPlayer === PieceColor.WHITE ? "Trắng" : "Đen";
       toast.success(`Chiếu hết! ${winner} thắng!`);
     } else if (newState.isCheck) {
       toast.warning('Chiếu!');
     }
-    
+
     setSelectedPosition(null);
     setValidMoves([]);
     setPromotionPosition(null);
@@ -184,7 +188,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
     if (onNewGame) {
       onNewGame();
       setShowCheckmateModal(false);
-      
+
       toast.success("Trò chơi mới đã bắt đầu!", {
         duration: 3000,
         position: "top-center",
@@ -203,7 +207,7 @@ const ChessBoard: FC<ChessBoardProps> = ({
   const isPartOfLastMove = (row: number, col: number) => {
     const { lastMove } = gameState;
     if (!lastMove) return false;
-    
+
     return (
       (lastMove.from.row === row && lastMove.from.col === col) ||
       (lastMove.to.row === row && lastMove.to.col === col)
@@ -213,10 +217,10 @@ const ChessBoard: FC<ChessBoardProps> = ({
   const isSquareInCheck = (row: number, col: number) => {
     const { board, isCheck } = gameState;
     const piece = board[row][col];
-    
-    return isCheck && 
-      piece && 
-      piece.type === PieceType.KING && 
+
+    return isCheck &&
+      piece &&
+      piece.type === PieceType.KING &&
       piece.color === gameState.currentPlayer;
   };
 
@@ -246,14 +250,14 @@ const ChessBoard: FC<ChessBoardProps> = ({
         <div className="w-full h-full grid grid-cols-6 grid-rows-6 relative">
           {boardRows.map(rowIndex => {
             const actualRow = perspective === PieceColor.WHITE ? 5 - rowIndex : rowIndex;
-            
+
             return boardCols.map(colIndex => {
               const actualCol = perspective === PieceColor.WHITE ? colIndex : 5 - colIndex;
-              
+
               const position = { row: actualRow, col: actualCol };
               const piece = gameState.board[actualRow][actualCol];
               const isValidMoveSquare = validMoves.some(move => move.row === actualRow && move.col === actualCol);
-              
+
               return (
                 <div
                   key={`${actualRow}-${actualCol}`}
@@ -291,14 +295,14 @@ const ChessBoard: FC<ChessBoardProps> = ({
                       )}
                     </>
                   )}
-                  
+
                   <AnimatePresence mode="wait">
                     {piece && (
                       <motion.div
                         key={`piece-${piece.id}-${actualRow}-${actualCol}`}
                         initial={{ scale: 0.8, opacity: 0 }}
-                        animate={{ 
-                          scale: 1, 
+                        animate={{
+                          scale: 1,
                           opacity: 1,
                           y: isValidMoveSquare ? [0, -5, 0].length > 2 ? 0 : [0, -5] : 0
                         }}
@@ -310,15 +314,15 @@ const ChessBoard: FC<ChessBoardProps> = ({
                         }}
                         className="w-full h-full p-1"
                       >
-                        <ChessPiece 
-                          piece={piece} 
+                        <ChessPiece
+                          piece={piece}
                           isSelected={selectedPosition?.row === actualRow && selectedPosition?.col === actualCol}
                         />
                       </motion.div>
                     )}
-                    
+
                     {isDroppingPiece && isValidMoveSquare && !piece && (
-                      <motion.div 
+                      <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 0.6 }}
                         exit={{ opacity: 0 }}
@@ -335,17 +339,17 @@ const ChessBoard: FC<ChessBoardProps> = ({
             });
           })}
         </div>
-        
+
         {isDroppingPiece && (
           <div className="absolute top-2 left-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
             Đang thả quân...
           </div>
         )}
       </div>
-      
+
       {promotionPosition && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
-          <motion.div 
+          <motion.div
             initial={{ scale: 0.9, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             className="glass-panel p-6 rounded-xl"
@@ -360,13 +364,13 @@ const ChessBoard: FC<ChessBoardProps> = ({
                   className="w-16 h-16 bg-white/10 hover:bg-white/20 rounded-lg flex items-center justify-center transition-colors"
                   onClick={() => handlePromotion(type)}
                 >
-                  <ChessPiece 
-                    piece={{ 
-                      id: `promotion-${type}`, 
-                      type, 
+                  <ChessPiece
+                    piece={{
+                      id: `promotion-${type}`,
+                      type,
                       color: gameState.currentPlayer,
                       hasMoved: true
-                    }} 
+                    }}
                     className="text-5xl"
                   />
                 </button>
@@ -376,9 +380,9 @@ const ChessBoard: FC<ChessBoardProps> = ({
         </div>
       )}
 
-      <CheckmateModal 
+      <CheckmateModal
         winner={gameState.currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE}
-        onNewGame={handleNewGame || (() => {})}
+        onNewGame={handleNewGame || (() => { })}
         open={showCheckmateModal}
       />
     </div>
