@@ -790,56 +790,90 @@ export const makeMove = (
 
 // Add these functions to support the piece dropping feature
 export const getValidDropSquares = (gameState: GameState, piece: ChessPiece): Position[] => {
-  const { board } = gameState;
+  const { board, currentPlayer } = gameState;
   const validSquares: Position[] = [];
 
-  // Pawns can't be dropped on the first or last rank
-  const isFirstOrLastRank = (row: number): boolean => {
-    return row === 0 || row === 5;
-  };
-
-  // Check each square on the board
-  for (let row = 0; row < 6; row++) {
-    for (let col = 0; col < 6; col++) {
-      // Square must be empty
-      if (board[row][col] === null) {
-        // Pawns can't be dropped on the first or last rank
-        if (piece.type === PieceType.PAWN && isFirstOrLastRank(row)) {
-          continue;
+  // Nếu vua không bị chiếu, thả quân vào bất kỳ ô trống nào
+  if (!isKingInCheck(gameState)) {
+    for (let row = 0; row < 6; row++) {
+      for (let col = 0; col < 6; col++) {
+        if (board[row][col] === null) {
+          // Tốt không được thả vào hàng đầu hoặc cuối
+          if (piece.type === PieceType.PAWN && (row === 0 || row === 5)) {
+            continue;
+          }
+          validSquares.push({ row, col });
         }
-        validSquares.push({ row, col });
       }
     }
+    return validSquares;
   }
 
-  return validSquares;
-};
+  // Nếu vua bị chiếu, xác định các quân tấn công
+  const attackingPieces = getAttackingPieces(gameState);
 
+  // Nếu có hơn một quân tấn công, không cho phép thả quân
+  if (attackingPieces.length > 1) {
+    return [];
+  }
+
+  // Chỉ có một quân tấn công
+  const attackerPos = attackingPieces[0];
+  const attacker = board[attackerPos.row][attackerPos.col];
+  if (!attacker) return [];
+
+  // Tìm vị trí vua
+  const kingPos = findKingPosition(board, currentPlayer);
+  if (!kingPos) return [];
+
+  // Nếu quân tấn công là mã, không thể chặn bằng cách thả quân
+  if (attacker.type === PieceType.KNIGHT) {
+    return [];
+  }
+
+  // Với xe, tượng, hậu: thả quân vào các ô trống trên đường chặn
+  const blockingPath = findBlockingPath(attackerPos, kingPos);
+  blockingPath.forEach(pos => {
+    if (board[pos.row][pos.col] === null) {
+      validSquares.push(pos);
+    }
+  });
+
+  // Lọc các vị trí để đảm bảo sau khi thả quân, vua không còn bị chiếu
+  return validSquares.filter(pos => {
+    const tempBoard = board.map(row => [...row]);
+    tempBoard[pos.row][pos.col] = piece;
+    const tempGameState = { ...gameState, board: tempBoard };
+    return !isKingInCheck(tempGameState, currentPlayer);
+  });
+};
 export const dropPiece = (gameState: GameState, piece: ChessPiece, position: Position): GameState => {
   const newGameState = { ...gameState };
   const { board, pieceBank, currentPlayer } = newGameState;
 
-  // Create a new board with the piece dropped
+  // Kiểm tra ô đích phải trống
+  if (board[position.row][position.col] !== null) {
+    console.error('Không thể thả quân vào ô đã có quân');
+    return gameState;
+  }
+
+  // Tạo bản sao bàn cờ mới
   const newBoard = board.map(row => [...row]);
 
-  // Create a unique ID for the dropped piece
+  // Tạo ID duy nhất cho quân cờ được thả
   const uniqueId = `${piece.color}-${piece.type}-${Date.now()}`;
-
-  // Create the new piece with the unique ID
   const droppedPiece: ChessPiece = {
     ...piece,
     id: uniqueId,
     hasMoved: true,
   };
 
-  // Place the piece on the board
+  // Đặt quân cờ vào ô trống
   newBoard[position.row][position.col] = droppedPiece;
 
-  // Remove the piece from the piece bank
+  // Cập nhật ngân hàng quân cờ
   const newPieceBank = { ...pieceBank };
   const pieceBankForCurrentPlayer = [...newPieceBank[currentPlayer]];
-
-  // Find the index of the first piece of the same type
   const pieceIndex = pieceBankForCurrentPlayer.findIndex(p => p.type === piece.type);
 
   if (pieceIndex !== -1) {
@@ -847,18 +881,18 @@ export const dropPiece = (gameState: GameState, piece: ChessPiece, position: Pos
     newPieceBank[currentPlayer] = pieceBankForCurrentPlayer;
   }
 
-  // Create the move record
+  // Ghi lại nước đi
   const move: Move = {
-    from: { row: -1, col: -1 }, // Special marker for dropped pieces
+    from: { row: -1, col: -1 }, // Đánh dấu đặc biệt cho quân được thả
     to: position,
     piece: droppedPiece,
     isDropped: true,
   };
 
-  // Switch the current player
+  // Chuyển lượt người chơi
   const nextPlayer = currentPlayer === PieceColor.WHITE ? PieceColor.BLACK : PieceColor.WHITE;
 
-  // Update game state with fresh values for check flags
+  // Cập nhật trạng thái trò chơi
   const newState = {
     ...newGameState,
     board: newBoard,
@@ -869,33 +903,23 @@ export const dropPiece = (gameState: GameState, piece: ChessPiece, position: Pos
     validMoves: [],
     lastMove: move,
     isDroppingPiece: false,
-    isCheck: false,       // Reset
-    isCheckmate: false,   // Reset
-    isStalemate: false    // Reset
+    isCheck: false,
+    isCheckmate: false,
+    isStalemate: false,
   };
 
-  // Check if the opponent (new current player) is now in check
-  console.log(`Kiểm tra xem người chơi ${nextPlayer} có bị chiếu sau khi thả quân không`);
+  // Kiểm tra xem đối thủ có bị chiếu không
   const isCheck = isKingInCheck(newState);
   newState.isCheck = isCheck;
 
-  // If in check, check for checkmate
+  // Nếu bị chiếu, kiểm tra chiếu hết
   if (isCheck) {
-    console.log(`Người chơi ${nextPlayer} bị chiếu sau khi thả quân, kiểm tra chiếu hết...`);
     const isCheckmate = checkIfCheckmate(newState);
     newState.isCheckmate = isCheckmate;
-
-    if (isCheckmate) {
-      console.log(`CHIẾU HẾT! Người chơi ${currentPlayer} thắng bằng cách thả quân!`);
-    }
   } else {
-    // Check for stalemate if not in check
+    // Nếu không bị chiếu, kiểm tra hòa cờ
     const isStalemate = checkIfStalemate(newState);
     newState.isStalemate = isStalemate;
-
-    if (isStalemate) {
-      console.log(`HÒA CỜ! Không còn nước đi hợp lệ`);
-    }
   }
 
   return newState;
